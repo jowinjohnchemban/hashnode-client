@@ -169,24 +169,7 @@ cp -r src/lib/api/hashnode your-project/lib/api/hashnode
 npm install axios
 ```
 
-### Option 2: Publish as npm Package
-
-```bash
-# Add package.json in hashnode/
-{
-  "name": "@yourorg/hashnode-client",
-  "version": "1.0.0",
-  "main": "index.ts",
-  "dependencies": {
-    "axios": "^1.13.2"
-  }
-}
-
-# Publish
-npm publish
-```
-
-### Option 3: Use as Git Submodule
+### Option 2: Use as Git Submodule
 
 ```bash
 git submodule add <your-repo-url> lib/api/hashnode
