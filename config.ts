@@ -9,7 +9,7 @@
  * 
  * @example Environment Setup
  * ```env
- * NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST="yourblog.hashnode.dev"
+ * HASHNODE_PUBLICATION_HOST="yourblog.hashnode.dev"
  * ```
  */
 
@@ -18,7 +18,7 @@ export const HASHNODE_CONFIG = {
   API_URL: 'https://gql.hashnode.com',
   
   /** Publication hostname */
-  PUBLICATION_HOST: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST || 'yourblog.hashnode.dev',
+  PUBLICATION_HOST: process.env.HASHNODE_PUBLICATION_HOST || 'yourblog.hashnode.dev',
   
   /** Request timeout in milliseconds */
   TIMEOUT_MS: 15000,
