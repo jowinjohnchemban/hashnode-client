@@ -1,9 +1,9 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "keywords": [
     "hashnode",
     "graphql",
@@ -33,27 +33,29 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
   "exports": {
     ".": {
-      "types": "./index.ts",
-      "default": "./index.ts"
+      "types": "./index.d.ts",
+      "default": "./index.js"
     },
     "./types": {
-      "types": "./types.ts",
-      "default": "./types.ts"
+      "types": "./types.d.ts",
+      "default": "./types.js"
     },
     "./config": {
-      "types": "./config.ts",
-      "default": "./config.ts"
+      "types": "./config.d.ts",
+      "default": "./config.js"
     }
   },
   "files": [
-    "index.ts",
-    "service.ts",
-    "queries.ts",
-    "types.ts",
-    "config.ts",
-    "graphql-client.ts",
+    "*.js",
+    "*.d.ts",
+    "*.d.ts.map",
+    "*.js.map",
     "README.md",
     "LICENSE",
     ".env.example"
