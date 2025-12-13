@@ -1,10 +1,6 @@
 # Exclude development and testing files from npm package
 
-# Source TypeScript files (compiled .js files will be included instead)
-*.ts
-!*.d.ts
-
-# TypeScript config
+# TypeScript config (source .ts files ARE included)
 tsconfig.json
 
 # Environment files (example should be included)
