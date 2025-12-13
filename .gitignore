@@ -11,11 +11,14 @@ dist/
 build/
 *.tsbuildinfo
 
-# Compiled files (generated during build)
+# Compiled files (generated during build, but will be published to npm)
 *.js
 *.d.ts
 *.d.ts.map
 *.js.map
+
+# Lock files
+package-lock.json
 
 # IDE
 .vscode/

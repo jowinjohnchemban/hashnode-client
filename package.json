@@ -1,9 +1,11 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "1.0.12",
+  "version": "1.0.2",
   "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js",
   "main": "index.js",
+  "module": "index.js",
   "types": "index.d.ts",
+  "source": "index.ts",
   "keywords": [
     "hashnode",
     "graphql",
@@ -35,29 +37,44 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "del /q *.js *.d.ts *.d.ts.map *.js.map 2>nul || echo Clean complete",
     "prepublishOnly": "npm run build"
   },
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "default": "./index.js"
+      "import": "./index.js",
+      "require": "./index.js",
+      "default": "./index.js",
+      "source": "./index.ts"
     },
     "./types": {
       "types": "./types.d.ts",
-      "default": "./types.js"
+      "import": "./types.js",
+      "require": "./types.js",
+      "default": "./types.js",
+      "source": "./types.ts"
     },
     "./config": {
       "types": "./config.d.ts",
-      "default": "./config.js"
-    }
+      "import": "./config.js",
+      "require": "./config.js",
+      "default": "./config.js",
+      "source": "./config.ts"
+    },
+    "./source/*": "./*.ts"
   },
   "files": [
+    "*.ts",
     "*.js",
     "*.d.ts",
     "*.d.ts.map",
     "*.js.map",
     "README.md",
     "LICENSE",
-    ".env.example"
+    ".env.example",
+    "!tsconfig.json",
+    "!*.test.ts",
+    "!*.spec.ts"
   ]
 }
