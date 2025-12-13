@@ -1,6 +1,6 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "1.0.2",
+  "version": "1.0.13",
   "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js",
   "main": "index.js",
   "module": "index.js",
