@@ -11,6 +11,12 @@ dist/
 build/
 *.tsbuildinfo
 
+# Compiled files (generated during build)
+*.js
+*.d.ts
+*.d.ts.map
+*.js.map
+
 # IDE
 .vscode/
 .idea/
