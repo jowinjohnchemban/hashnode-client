@@ -60,7 +60,7 @@ export class HashnodeService {
   }
 
   /**
-   * Execute a GraphQL query
+   * Execute a GraphQL query with Next.js server-side caching
    */
   private async executeQuery<T>(
     query: string,
@@ -71,9 +71,6 @@ export class HashnodeService {
       { query, variables },
       { 
         timeout: this.timeout,
-        headers: {
-          'Content-Type': 'application/json',
-        },
       }
     );
   }
