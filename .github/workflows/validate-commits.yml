@@ -1,0 +1,155 @@
+name: Validate Commit Messages
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate PR title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!?: .+"
+          
+          if ! echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+            echo "❌ PR title does not follow Conventional Commits format!"
+            echo ""
+            echo "PR Title: $PR_TITLE"
+            echo ""
+            echo "Expected format: <type>[scope]: <description>"
+            echo ""
+            echo "Examples:"
+            echo "  ✓ feat: add webhook support"
+            echo "  ✓ fix(types): correct PageInfo interface"
+            echo "  ✓ feat!: redesign API (breaking change)"
+            echo "  ✓ docs: update README"
+            echo ""
+            echo "Valid types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert"
+            echo ""
+            echo "See: https://github.com/${{ github.repository }}/blob/main/.github/CONVENTIONAL_COMMITS.md"
+            exit 1
+          fi
+          
+          echo "✓ PR title follows Conventional Commits format"
+      
+      - name: Validate commit messages
+        run: |
+          echo "Validating commit messages..."
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert|Merge)(\(.+\))?!?: .+"
+          INVALID_COMMITS=0
+          
+          # Get all commits in the PR
+          for commit in $(git rev-list origin/${{ github.base_ref }}..HEAD); do
+            MESSAGE=$(git log --format=%s -n 1 $commit)
+            
+            # Skip merge commits
+            if echo "$MESSAGE" | grep -q "^Merge"; then
+              continue
+            fi
+            
+            if ! echo "$MESSAGE" | grep -qE "$PATTERN"; then
+              echo "❌ Invalid commit: $commit"
+              echo "   Message: $MESSAGE"
+              INVALID_COMMITS=$((INVALID_COMMITS + 1))
+            fi
+          done
+          
+          if [ $INVALID_COMMITS -gt 0 ]; then
+            echo ""
+            echo "❌ Found $INVALID_COMMITS invalid commit message(s)"
+            echo ""
+            echo "Commit messages must follow Conventional Commits format:"
+            echo "  <type>[scope]: <description>"
+            echo ""
+            echo "Examples:"
+            echo "  ✓ feat: add new feature"
+            echo "  ✓ fix(api): handle null responses"
+            echo "  ✓ docs: update examples"
+            echo ""
+            echo "Valid types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert"
+            echo ""
+            echo "See: https://github.com/${{ github.repository }}/blob/main/.github/CONVENTIONAL_COMMITS.md"
+            exit 1
+          fi
+          
+          echo "✓ All commit messages are valid"
+      
+      - name: Check for breaking changes
+        run: |
+          # Check if any commit indicates breaking changes
+          BREAKING=0
+          
+          for commit in $(git rev-list origin/${{ github.base_ref }}..HEAD); do
+            MESSAGE=$(git log --format=%B -n 1 $commit)
+            
+            if echo "$MESSAGE" | grep -qE "^(feat|fix|perf|refactor|revert)(\(.+\))?!:|BREAKING CHANGE:"; then
+              echo "⚠️  Breaking change detected in commit $commit"
+              BREAKING=1
+            fi
+          done
+          
+          if [ $BREAKING -eq 1 ]; then
+            echo ""
+            echo "⚠️  This PR contains BREAKING CHANGES"
+            echo "   This will trigger a MAJOR version bump (e.g., 2.0.0 → 3.0.0)"
+            echo ""
+            echo "Please ensure:"
+            echo "  - Migration guide is updated in docs/MIGRATION.md"
+            echo "  - Breaking changes are documented in PR description"
+            echo "  - API changes are reflected in docs/API_REFERENCE.md"
+          fi
+      
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Commit Message Validation Failed
+            
+            This PR contains commits that don't follow the [Conventional Commits](https://www.conventionalcommits.org/) format.
+            
+            ### Required Format
+            \`\`\`
+            <type>[optional scope]: <description>
+            \`\`\`
+            
+            ### Valid Types
+            - \`feat\`: New feature (MINOR version bump)
+            - \`fix\`: Bug fix (PATCH version bump)
+            - \`docs\`: Documentation only
+            - \`style\`: Code style/formatting
+            - \`refactor\`: Code refactoring
+            - \`perf\`: Performance improvement
+            - \`test\`: Tests
+            - \`chore\`: Maintenance tasks
+            - \`ci\`: CI/CD changes
+            
+            ### Examples
+            - ✅ \`feat: add webhook support\`
+            - ✅ \`fix(types): correct interface definition\`
+            - ✅ \`feat!: redesign API\` (breaking change)
+            - ✅ \`docs: update README\`
+            
+            ### Breaking Changes
+            For breaking changes, add \`!\` after type/scope or include \`BREAKING CHANGE:\` in commit body:
+            - \`feat!: remove deprecated function\`
+            - \`fix!: change API signature\`
+            
+            See our [Conventional Commits Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/CONVENTIONAL_COMMITS.md) for more details.
+            
+            ---
+            
+            💡 **Tip**: Squash commits when merging to ensure clean commit history.`
+            })

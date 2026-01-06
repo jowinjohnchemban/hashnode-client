@@ -111,4 +111,265 @@ export class HashnodeQueries {
       }
     `;
   }
+
+  /**
+   * Query to search posts within a publication
+   */
+  static searchPosts(): string {
+    return `
+      query SearchPostsOfPublication($first: Int!, $after: String, $filter: SearchPostsOfPublicationFilter!) {
+        searchPostsOfPublication(first: $first, after: $after, filter: $filter) {
+          edges {
+            node {
+              ${POST_EXTENDED_FIELDS}
+            }
+            cursor
+          }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch series list
+   */
+  static getSeriesList(): string {
+    return `
+      query GetSeriesList($host: String!, $first: Int!, $after: String) {
+        publication(host: $host) {
+          seriesList(first: $first, after: $after) {
+            edges {
+              node {
+                id name slug coverImage createdAt
+                description { text html markdown }
+                author { name username profilePicture }
+                cuid sortOrder
+              }
+              cursor
+            }
+            pageInfo { hasNextPage endCursor }
+            totalDocuments
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch a single series by slug
+   */
+  static getSeries(): string {
+    return `
+      query GetSeries($host: String!, $slug: String!) {
+        publication(host: $host) {
+          series(slug: $slug) {
+            id name slug coverImage createdAt
+            description { text html markdown }
+            author { name username profilePicture }
+            cuid sortOrder
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch posts in a series
+   */
+  static getSeriesPosts(): string {
+    return `
+      query GetSeriesPosts($host: String!, $seriesSlug: String!, $first: Int!, $after: String) {
+        publication(host: $host) {
+          series(slug: $seriesSlug) {
+            posts(first: $first, after: $after) {
+              edges {
+                node {
+                  ${POST_EXTENDED_FIELDS}
+                }
+                cursor
+              }
+              pageInfo { hasNextPage endCursor }
+              totalDocuments
+            }
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch static pages
+   */
+  static getStaticPages(): string {
+    return `
+      query GetStaticPages($host: String!, $first: Int!, $after: String) {
+        publication(host: $host) {
+          staticPages(first: $first, after: $after) {
+            edges {
+              node {
+                id title slug
+                content { html markdown text }
+                hidden
+                ogMetaData { image }
+                seo { title description }
+              }
+              cursor
+            }
+            pageInfo { hasNextPage endCursor }
+            totalDocuments
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch a single static page
+   */
+  static getStaticPage(): string {
+    return `
+      query GetStaticPage($host: String!, $slug: String!) {
+        publication(host: $host) {
+          staticPage(slug: $slug) {
+            id title slug
+            content { html markdown text }
+            hidden
+            ogMetaData { image }
+            seo { title description }
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch comments on a post
+   */
+  static getPostComments(): string {
+    return `
+      query GetPostComments($postId: ID!, $first: Int!, $after: String) {
+        post(id: $postId) {
+          comments(first: $first, after: $after) {
+            edges {
+              node {
+                id
+                content { html markdown text }
+                author { name username profilePicture }
+                dateAdded
+                totalReactions
+                myTotalReactions
+              }
+              cursor
+            }
+            pageInfo { hasNextPage endCursor }
+            totalDocuments
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch recommended publications
+   */
+  static getRecommendedPublications(): string {
+    return `
+      query GetRecommendedPublications($host: String!) {
+        publication(host: $host) {
+          recommendedPublications {
+            node {
+              id title displayTitle url
+              author { name username profilePicture }
+            }
+            totalFollowersGained
+          }
+          totalRecommendedPublications
+        }
+      }
+    `;
+  }
+
+  /**
+   * Query to fetch drafts
+   */
+  static getDrafts(): string {
+    return `
+      query GetDrafts($host: String!, $first: Int!, $after: String) {
+        publication(host: $host) {
+          drafts(first: $first, after: $after) {
+            edges {
+              node {
+                id slug title subtitle
+                author { name username profilePicture }
+                tags { name slug }
+                coverImage { url }
+                dateUpdated updatedAt
+              }
+              cursor
+            }
+            pageInfo { hasNextPage endCursor }
+            totalDocuments
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Mutation to create a webhook
+   */
+  static createWebhook(): string {
+    return `
+      mutation CreateWebhook($input: CreateWebhookInput!) {
+        createWebhook(input: $input) {
+          webhook {
+            id url events secret createdAt updatedAt
+            publication { id title }
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Mutation to update a webhook
+   */
+  static updateWebhook(): string {
+    return `
+      mutation UpdateWebhook($input: UpdateWebhookInput!) {
+        updateWebhook(input: $input) {
+          webhook {
+            id url events secret createdAt updatedAt
+          }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Mutation to delete a webhook
+   */
+  static deleteWebhook(): string {
+    return `
+      mutation DeleteWebhook($id: ID!) {
+        deleteWebhook(id: $id) {
+          webhook { id }
+        }
+      }
+    `;
+  }
+
+  /**
+   * Mutation to trigger webhook test
+   */
+  static triggerWebhookTest(): string {
+    return `
+      mutation TriggerWebhookTest($input: TriggerWebhookTestInput!) {
+        triggerWebhookTest(input: $input) {
+          webhook { id url events }
+        }
+      }
+    `;
+  }
 }

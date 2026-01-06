@@ -1,0 +1,252 @@
+name: Auto Version and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  version-and-release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Analyze commits and determine version bump
+        id: version
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, will create v1.0.0"
+            echo "bump=minor" >> $GITHUB_OUTPUT
+            echo "current_version=0.0.0" >> $GITHUB_OUTPUT
+            echo "new_version=1.0.0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Last tag: $LAST_TAG"
+          CURRENT_VERSION=${LAST_TAG#v}
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          # Get commit messages since last tag
+          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s" --no-merges)
+          
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits since last tag"
+            echo "bump=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Analyzing commits..."
+          echo "$COMMITS"
+          
+          # Check for breaking changes (MAJOR version)
+          if echo "$COMMITS" | grep -qiE "^(feat|fix|perf|refactor|revert)!:|BREAKING CHANGE:"; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+            BUMP_TYPE="major"
+          # Check for features (MINOR version)
+          elif echo "$COMMITS" | grep -qiE "^feat(\(.*\))?:"; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+            BUMP_TYPE="minor"
+          # Check for fixes or other changes (PATCH version)
+          elif echo "$COMMITS" | grep -qiE "^(fix|perf|refactor|revert)(\(.*\))?:"; then
+            echo "bump=patch" >> $GITHUB_OUTPUT
+            BUMP_TYPE="patch"
+          # No version bump needed (chore, docs, style, test, etc.)
+          else
+            echo "bump=none" >> $GITHUB_OUTPUT
+            echo "No version bump needed (only chore/docs/style/test commits)"
+            exit 0
+          fi
+          
+          echo "Version bump type: $BUMP_TYPE"
+          
+          # Calculate new version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          if [ "$BUMP_TYPE" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          elif [ "$BUMP_TYPE" = "patch" ]; then
+            PATCH=$((PATCH + 1))
+          fi
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version will be: $NEW_VERSION"
+      
+      - name: Check if version bump needed
+        id: check
+        run: |
+          if [ "${{ steps.version.outputs.bump }}" = "none" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping release - no version bump needed"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Update package.json version
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
+          echo "✓ Updated package.json to v${{ steps.version.outputs.new_version }}"
+      
+      - name: Build TypeScript
+        if: steps.check.outputs.skip == 'false'
+        run: npm run build
+      
+      - name: Verify build
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          node -e "const c = require('./index.js'); console.log('✓ Module loads');"
+          ls -la *.js *.d.ts
+      
+      - name: Generate changelog
+        if: steps.check.outputs.skip == 'false'
+        id: changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Categorize commits
+          BREAKING=$(echo "$COMMITS" | grep -iE "^- (feat|fix|perf|refactor|revert)!:|BREAKING CHANGE:" || echo "")
+          FEATURES=$(echo "$COMMITS" | grep -iE "^- feat(\(.*\))?:" || echo "")
+          FIXES=$(echo "$COMMITS" | grep -iE "^- fix(\(.*\))?:" || echo "")
+          PERF=$(echo "$COMMITS" | grep -iE "^- perf(\(.*\))?:" || echo "")
+          REFACTOR=$(echo "$COMMITS" | grep -iE "^- refactor(\(.*\))?:" || echo "")
+          DOCS=$(echo "$COMMITS" | grep -iE "^- docs(\(.*\))?:" || echo "")
+          CHORE=$(echo "$COMMITS" | grep -iE "^- chore(\(.*\))?:" || echo "")
+          
+          # Build changelog
+          CHANGELOG="## What's Changed\n\n"
+          
+          if [ -n "$BREAKING" ]; then
+            CHANGELOG="${CHANGELOG}### ⚠️ BREAKING CHANGES\n\n$BREAKING\n\n"
+          fi
+          
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="${CHANGELOG}### ✨ New Features\n\n$FEATURES\n\n"
+          fi
+          
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n\n$FIXES\n\n"
+          fi
+          
+          if [ -n "$PERF" ]; then
+            CHANGELOG="${CHANGELOG}### ⚡ Performance Improvements\n\n$PERF\n\n"
+          fi
+          
+          if [ -n "$REFACTOR" ]; then
+            CHANGELOG="${CHANGELOG}### ♻️ Code Refactoring\n\n$REFACTOR\n\n"
+          fi
+          
+          if [ -n "$DOCS" ]; then
+            CHANGELOG="${CHANGELOG}### 📝 Documentation\n\n$DOCS\n\n"
+          fi
+          
+          if [ -n "$CHORE" ]; then
+            CHANGELOG="${CHANGELOG}### 🔧 Chores\n\n$CHORE\n\n"
+          fi
+          
+          # Save to file for multiline output
+          echo -e "$CHANGELOG" > changelog.md
+          
+          # Also output for GitHub
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Commit version bump
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          git tag "v${{ steps.version.outputs.new_version }}"
+      
+      - name: Push changes
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git push origin main
+          git push origin "v${{ steps.version.outputs.new_version }}"
+      
+      - name: Publish to npm
+        if: steps.check.outputs.skip == 'false'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Create GitHub Release
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          release_name: v${{ steps.version.outputs.new_version }}
+          body: |
+            ## @jowinjohnchemban/hashnode-client v${{ steps.version.outputs.new_version }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Installation
+            ```bash
+            npm install @jowinjohnchemban/hashnode-client@${{ steps.version.outputs.new_version }}
+            ```
+            
+            ### Documentation
+            - [API Reference](https://github.com/${{ github.repository }}/blob/main/docs/API_REFERENCE.md)
+            - [Examples](https://github.com/${{ github.repository }}/tree/main/examples)
+            
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.current_version }}...v${{ steps.version.outputs.new_version }}
+          draft: false
+          prerelease: false
+      
+      - name: Summary
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ steps.version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump Type**: ${{ steps.version.outputs.bump }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm**: https://www.npmjs.com/package/@jowinjohnchemban/hashnode-client" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Published successfully!" >> $GITHUB_STEP_SUMMARY

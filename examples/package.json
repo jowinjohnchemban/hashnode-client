@@ -1,0 +1,20 @@
+{
+  "name": "hashnode-client-examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example implementations for @jowinjohnchemban/hashnode-client",
+  "type": "module",
+  "scripts": {
+    "basic": "ts-node basic-usage.ts",
+    "advanced": "ts-node advanced-usage.ts",
+    "all": "npm run basic && npm run advanced"
+  },
+  "dependencies": {
+    "@jowinjohnchemban/hashnode-client": "file:.."
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

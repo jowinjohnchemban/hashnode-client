@@ -1,18 +1,23 @@
 name: Publish to npm
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v2.0.0, v2.1.0, etc.
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    
     permissions:
-      contents: read
-      id-token: write
+      contents: write
+      id-token: write  # Required for npm provenance
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,10 +26,73 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       
       - name: Install dependencies
-        run: npm install
-        working-directory: .
+        run: npm ci
+      
+      - name: Build TypeScript
+        run: npm run build
+      
+      - name: Verify build artifacts
+        run: |
+          echo "Checking compiled files..."
+          ls -la *.js *.d.ts || exit 1
+          echo "✓ Build artifacts verified"
+      
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+          echo "Publishing version: $TAG"
+      
+      - name: Verify package.json version matches tag
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ Version mismatch!"
+            echo "   package.json: $PACKAGE_VERSION"
+            echo "   Git tag: $TAG_VERSION"
+            exit 1
+          fi
+          echo "✓ Version matches: $PACKAGE_VERSION"
+      
+      - name: Test module loads
+        run: |
+          node -e "const client = require('./index.js'); console.log('✓ Module loads successfully');"
+          node -e "const { getBlogPosts } = require('./index.js'); console.log('✓ Named exports work');"
       
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## @jowinjohnchemban/hashnode-client v${{ steps.version.outputs.version }}
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/docs/FEATURES.md) for details.
+            
+            ### Installation
+            ```bash
+            npm install @jowinjohnchemban/hashnode-client@${{ steps.version.outputs.version }}
+            ```
+            
+            ### Documentation
+            - [API Reference](https://github.com/${{ github.repository }}/blob/main/docs/API_REFERENCE.md)
+            - [Examples](https://github.com/${{ github.repository }}/tree/main/examples)
+          draft: false
+          prerelease: false
+      
+      - name: Post-publish verification
+        run: |
+          echo "Waiting 30 seconds for npm registry to update..."
+          sleep 30
+          npm view @jowinjohnchemban/hashnode-client@${{ steps.version.outputs.version }} version
+          echo "✓ Package published successfully!"
+

@@ -1,7 +1,7 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "1.0.13",
-  "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js",
+  "version": "2.0.0",
+  "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js with full feature support including webhooks, search, series, and static pages",
   "main": "index.js",
   "module": "index.js",
   "types": "index.d.ts",
@@ -38,7 +38,9 @@
   "scripts": {
     "build": "tsc",
     "clean": "del /q *.js *.d.ts *.d.ts.map *.js.map 2>nul || echo Clean complete",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "node -e \"const c = require('./index.js'); console.log('✓ Module loads'); console.log('✓ Functions:', Object.keys(c).filter(k => typeof c[k] === 'function').length);\"",
+    "verify": "npm run build && npm run test"
   },
   "exports": {
     ".": {

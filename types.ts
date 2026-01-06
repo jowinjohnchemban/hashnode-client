@@ -139,3 +139,291 @@ export interface Publication {
 export interface PublicationResponse {
   publication: Publication | null;
 }
+
+// ============================================
+// WEBHOOKS
+// ============================================
+
+/** Webhook event types */
+export type WebhookEvent = 
+  | 'POST_PUBLISHED'
+  | 'POST_UPDATED'
+  | 'POST_DELETED'
+  | 'STATIC_PAGE_PUBLISHED'
+  | 'STATIC_PAGE_UPDATED'
+  | 'STATIC_PAGE_DELETED';
+
+/** Webhook configuration */
+export interface Webhook {
+  id: string;
+  publication: Publication;
+  url: string;
+  events: WebhookEvent[];
+  secret: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/** Webhook response */
+export interface WebhookResponse {
+  webhook: Webhook | null;
+}
+
+/** Webhook list response */
+export interface WebhooksResponse {
+  publication: {
+    webhooks: Webhook[];
+  };
+}
+
+/** Webhook message for delivery tracking */
+export interface WebhookMessage {
+  id: string;
+  webhook: Webhook;
+  request: WebhookMessageRequest;
+  response?: WebhookMessageResponse;
+  createdAt: string;
+}
+
+/** Webhook message request details */
+export interface WebhookMessageRequest {
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/** Webhook message response details */
+export interface WebhookMessageResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+// ============================================
+// SERIES
+// ============================================
+
+/** Series information */
+export interface Series {
+  id: string;
+  name: string;
+  createdAt: string;
+  description?: {
+    text?: string;
+    html?: string;
+    markdown?: string;
+  };
+  coverImage?: string;
+  author: Author;
+  cuid: string;
+  slug: string;
+  sortOrder: 'ASCENDING' | 'DESCENDING';
+}
+
+/** Series connection response */
+export interface SeriesListResponse {
+  publication: {
+    seriesList: {
+      edges: Array<{
+        node: Series;
+        cursor: string;
+      }>;
+      pageInfo: PageInfo;
+      totalDocuments: number;
+    };
+  };
+}
+
+/** Single series response */
+export interface SeriesResponse {
+  publication: {
+    series: Series | null;
+  };
+}
+
+// ============================================
+// SEARCH
+// ============================================
+
+/** Search posts filter */
+export interface SearchPostsFilter {
+  publicationId: string;
+  query: string;
+}
+
+/** Search posts response */
+export interface SearchPostsResponse {
+  searchPostsOfPublication: {
+    edges: Array<{
+      node: BlogPost;
+      cursor: string;
+    }>;
+    pageInfo: PageInfo;
+  };
+}
+
+// ============================================
+// STATIC PAGES
+// ============================================
+
+/** Static page */
+export interface StaticPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: PostContent;
+  hidden: boolean;
+  ogMetaData?: {
+    image?: string;
+  };
+  seo?: {
+    title?: string;
+    description?: string;
+  };
+}
+
+/** Static pages response */
+export interface StaticPagesResponse {
+  publication: {
+    staticPages: {
+      edges: Array<{
+        node: StaticPage;
+        cursor: string;
+      }>;
+      pageInfo: PageInfo;
+      totalDocuments: number;
+    };
+  };
+}
+
+/** Single static page response */
+export interface StaticPageResponse {
+  publication: {
+    staticPage: StaticPage | null;
+  };
+}
+
+// ============================================
+// COMMENTS & DISCUSSIONS
+// ============================================
+
+/** Comment on a post */
+export interface Comment {
+  id: string;
+  content: PostContent;
+  author: Author;
+  dateAdded: string;
+  totalReactions: number;
+  myTotalReactions: number;
+}
+
+/** Reply to a comment */
+export interface Reply extends Comment {
+  parentCommentId: string;
+}
+
+/** Comments response */
+export interface CommentsResponse {
+  post: {
+    comments: {
+      edges: Array<{
+        node: Comment;
+        cursor: string;
+      }>;
+      pageInfo: PageInfo;
+      totalDocuments: number;
+    };
+  };
+}
+
+// ============================================
+// RECOMMENDATIONS
+// ============================================
+
+/** Recommended publication edge */
+export interface RecommendedPublicationEdge {
+  node: Publication;
+  totalFollowersGained: number;
+}
+
+/** Recommended publications response */
+export interface RecommendedPublicationsResponse {
+  publication: {
+    recommendedPublications: RecommendedPublicationEdge[];
+    totalRecommendedPublications: number;
+  };
+}
+
+// ============================================
+// DRAFTS
+// ============================================
+
+/** Draft post */
+export interface Draft {
+  id: string;
+  slug?: string;
+  title: string;
+  subtitle?: string;
+  author: Author;
+  tags?: Tag[];
+  coverImage?: CoverImage;
+  content?: PostContent;
+  dateUpdated: string;
+  updatedAt: string;
+}
+
+/** Drafts response */
+export interface DraftsResponse {
+  publication: {
+    drafts: {
+      edges: Array<{
+        node: Draft;
+        cursor: string;
+      }>;
+      pageInfo: PageInfo;
+      totalDocuments: number;
+    };
+  };
+}
+
+// ============================================
+// NEWSLETTER
+// ============================================
+
+/** Newsletter subscription status */
+export type NewsletterSubscribeStatus = 'SUBSCRIBED' | 'PENDING' | 'UNSUBSCRIBED';
+
+/** Newsletter subscriber */
+export interface NewsletterSubscriber {
+  email: string;
+  status: NewsletterSubscribeStatus;
+  subscribedAt: string;
+}
+
+// ============================================
+// ANALYTICS & STATS
+// ============================================
+
+/** Post views and analytics */
+export interface PostStats {
+  views: number;
+  reactions: number;
+  responseCount: number;
+  replyCount: number;
+}
+
+// ============================================
+// PAGINATION HELPERS
+// ============================================
+
+/** Cursor-based pagination variables */
+export interface PaginationVariables {
+  first: number;
+  after?: string;
+}
+
+/** Offset-based pagination variables */
+export interface OffsetPaginationVariables {
+  pageSize: number;
+  page: number;
+}

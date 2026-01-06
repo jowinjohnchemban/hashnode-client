@@ -26,6 +26,9 @@ export * from './types';
 export * from './config';
 export { HashnodeService, hashnodeService } from './service';
 
+// Re-export webhook utilities
+export * from './webhooks';
+
 /**
  * Convenience functions using the singleton service
  */
@@ -67,5 +70,124 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPostDetail | 
     return await hashnodeService.getBlogPostBySlug(slug);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Search posts within the publication
+ * @param query - Search query string
+ * @param limit - Number of results to return
+ * @returns Array of matching blog posts or empty array on error
+ */
+export async function searchPosts(query: string, limit?: number): Promise<BlogPost[]> {
+  try {
+    return await hashnodeService.searchPosts(query, limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch series list from the publication
+ * @param limit - Number of series to fetch
+ * @returns Array of series or empty array on error
+ */
+export async function getSeriesList(limit?: number): Promise<any[]> {
+  try {
+    return await hashnodeService.getSeriesList(limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch a single series by slug
+ * @param slug - Series slug
+ * @returns Series or null if not found/error
+ */
+export async function getSeries(slug: string): Promise<any | null> {
+  try {
+    return await hashnodeService.getSeries(slug);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch posts within a series
+ * @param seriesSlug - Series slug
+ * @param limit - Number of posts to fetch
+ * @returns Array of posts in the series or empty array on error
+ */
+export async function getSeriesPosts(seriesSlug: string, limit?: number): Promise<BlogPost[]> {
+  try {
+    return await hashnodeService.getSeriesPosts(seriesSlug, limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch static pages from the publication
+ * @param limit - Number of pages to fetch
+ * @returns Array of static pages or empty array on error
+ */
+export async function getStaticPages(limit?: number): Promise<any[]> {
+  try {
+    return await hashnodeService.getStaticPages(limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch a single static page by slug
+ * @param slug - Static page slug
+ * @returns Static page or null if not found/error
+ */
+export async function getStaticPage(slug: string): Promise<any | null> {
+  try {
+    return await hashnodeService.getStaticPage(slug);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch comments for a post
+ * @param postId - Post ID
+ * @param limit - Number of comments to fetch
+ * @returns Array of comments or empty array on error
+ */
+export async function getPostComments(postId: string, limit?: number): Promise<any[]> {
+  try {
+    return await hashnodeService.getPostComments(postId, limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch recommended publications
+ * @returns Array of recommended publications or empty array on error
+ */
+export async function getRecommendedPublications(): Promise<any[]> {
+  try {
+    return await hashnodeService.getRecommendedPublications();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch drafts from the publication (requires authentication)
+ * @param limit - Number of drafts to fetch
+ * @returns Array of drafts or empty array on error
+ */
+export async function getDrafts(limit?: number): Promise<any[]> {
+  try {
+    return await hashnodeService.getDrafts(limit);
+  } catch {
+    return [];
   }
 }

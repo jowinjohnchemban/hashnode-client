@@ -182,6 +182,216 @@ export class HashnodeService {
       }
     }
   }
+
+  /**
+   * Search posts within the publication
+   */
+  async searchPosts(query: string, limit: number = 10): Promise<BlogPost[]> {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    try {
+      const variables = {
+        first: Math.min(limit, HASHNODE_CONFIG.MAX_POSTS_PER_REQUEST),
+        filter: {
+          publicationId: this.publicationHost,
+          query: query.trim(),
+        },
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.searchPosts(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.searchPostsOfPublication.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch list of series in the publication
+   */
+  async getSeriesList(limit: number = 10): Promise<any[]> {
+    try {
+      const variables = {
+        host: this.publicationHost,
+        first: Math.min(limit, HASHNODE_CONFIG.MAX_POSTS_PER_REQUEST),
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getSeriesList(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.seriesList.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch a single series by slug
+   */
+  async getSeries(slug: string): Promise<any | null> {
+    if (!slug || slug.trim().length === 0) {
+      return null;
+    }
+
+    try {
+      const variables = { host: this.publicationHost, slug: slug.trim() };
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getSeries(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.series;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch posts in a series
+   */
+  async getSeriesPosts(seriesSlug: string, limit: number = 10): Promise<BlogPost[]> {
+    if (!seriesSlug || seriesSlug.trim().length === 0) {
+      return [];
+    }
+
+    try {
+      const variables = {
+        host: this.publicationHost,
+        seriesSlug: seriesSlug.trim(),
+        first: Math.min(limit, HASHNODE_CONFIG.MAX_POSTS_PER_REQUEST),
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getSeriesPosts(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.series.posts.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch static pages from the publication
+   */
+  async getStaticPages(limit: number = 10): Promise<any[]> {
+    try {
+      const variables = {
+        host: this.publicationHost,
+        first: Math.min(limit, HASHNODE_CONFIG.MAX_POSTS_PER_REQUEST),
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getStaticPages(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.staticPages.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch a single static page by slug
+   */
+  async getStaticPage(slug: string): Promise<any | null> {
+    if (!slug || slug.trim().length === 0) {
+      return null;
+    }
+
+    try {
+      const variables = { host: this.publicationHost, slug: slug.trim() };
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getStaticPage(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.staticPage;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch comments for a post
+   */
+  async getPostComments(postId: string, limit: number = 20): Promise<any[]> {
+    if (!postId || postId.trim().length === 0) {
+      return [];
+    }
+
+    try {
+      const variables = {
+        postId: postId.trim(),
+        first: Math.min(limit, 50), // Max 50 comments per page
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getPostComments(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.post.comments.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch recommended publications
+   */
+  async getRecommendedPublications(): Promise<any[]> {
+    try {
+      const variables = { host: this.publicationHost };
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getRecommendedPublications(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.recommendedPublications;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fetch drafts from the publication (requires authentication)
+   */
+  async getDrafts(limit: number = 10): Promise<any[]> {
+    try {
+      const variables = {
+        host: this.publicationHost,
+        first: Math.min(limit, HASHNODE_CONFIG.MAX_POSTS_PER_REQUEST),
+      };
+
+      const response = await this.executeQuery<any>(
+        HashnodeQueries.getDrafts(),
+        variables
+      );
+
+      const data = this.validateResponse(response);
+      return data.publication.drafts.edges.map((edge: any) => edge.node);
+    } catch {
+      return [];
+    }
+  }
 }
 
 /**

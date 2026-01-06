@@ -1,33 +1,130 @@
-# Exclude development and testing files from npm package
+# =============================================================================
+# NPM Ignore Configuration for Hashnode Client
+# =============================================================================
+# Files excluded from npm package (keep package lean)
 
-# TypeScript config (source .ts files ARE included)
+# Source TypeScript files (only ship compiled .js and .d.ts)
+*.ts
+!*.d.ts
+
+# Source maps (not needed in production)
+*.map
+*.js.map
+*.d.ts.map
+
+# Build configuration
+*.tsbuildinfo
 tsconfig.json
+tsconfig.*.json
 
-# Environment files (example should be included)
+# Development and CI/CD files
+.github/
+.github/copilot-instructions.md
+.vscode/
+.editorconfig
+.eslintrc*
+.eslintignore
+.prettierrc*
+.prettierignore
+
+# Documentation (keep only README.md in package root)
+docs/
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+# Examples and tests
+examples/
+test/
+tests/
+__tests__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+coverage/
+.nyc_output/
+jest.config.js
+jest.config.ts
+
+# Environment and secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+.env.example
 
-# Node modules
+# Dependencies
 node_modules/
 
-# Test files
-*.test.ts
-*.spec.ts
-__tests__/
-coverage/
+# Git files
+.git/
+.gitignore
+.gitattributes
+.gitmodules
 
-# Build artifacts
-dist/
-build/
-*.tsbuildinfo
+# CI/CD configurations
+.travis.yml
+.circleci/
+.gitlab-ci.yml
+azure-pipelines.yml
+appveyor.yml
+.drone.yml
 
 # IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
 *~
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Logs and debug files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+out/
+*.tgz
+
+# Cache directories
+.cache/
+.eslintcache
+.stylelintcache
+.npm
+.tscache/
+
+# Misc
+.DS_Store
+coverage/
+.nyc_output/
 
 # OS files
 .DS_Store

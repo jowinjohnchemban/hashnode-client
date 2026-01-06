@@ -105,6 +105,7 @@ export class GraphQLClient {
   ): Promise<T> {
     try {
       // Use Next.js fetch with server-side caching for Vercel
+      // Note: 'next' and 'cache' options are Next.js-specific extensions
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -113,10 +114,10 @@ export class GraphQLClient {
         },
         body: JSON.stringify(payload),
         // Next.js fetch caching - cache for 5 minutes on server
-        next: { revalidate: 300 }, // 5 minutes
-        // Don't cache in browser, let server handle it
-        cache: 'no-store',
-      });
+        ...(typeof (globalThis as any).EdgeRuntime !== 'undefined' || typeof (process as any).env?.NEXT_RUNTIME !== 'undefined'
+          ? { next: { revalidate: 300 }, cache: 'no-store' as RequestCache }
+          : {}),
+      } as RequestInit);
 
       if (!response.ok) {
         throw new GraphQLError(
