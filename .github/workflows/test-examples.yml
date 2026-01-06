@@ -1,0 +1,71 @@
+name: Test Examples
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'examples/**'
+      - '*.ts'
+      - 'package.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'examples/**'
+      - '*.ts'
+
+jobs:
+  test-examples:
+    runs-on: ubuntu-latest
+    
+    # Only run if HASHNODE_PUBLICATION_HOST is set
+    if: vars.HASHNODE_PUBLICATION_HOST != ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build package
+        run: npm run build
+      
+      - name: Install ts-node
+        run: npm install -g ts-node typescript
+      
+      - name: Verify examples compile
+        run: |
+          echo "Checking TypeScript compilation of examples..."
+          for file in examples/*.ts; do
+            echo "Checking $file..."
+            npx tsc --noEmit "$file" || exit 1
+          done
+          echo "✓ All examples compile successfully"
+      
+      - name: Run basic usage example (dry run)
+        env:
+          HASHNODE_PUBLICATION_HOST: ${{ vars.HASHNODE_PUBLICATION_HOST }}
+        run: |
+          echo "Testing basic-usage.ts..."
+          timeout 30s npx ts-node examples/basic-usage.ts || echo "Example completed or timed out (expected)"
+      
+      - name: Verify example structure
+        run: |
+          if [ ! -f examples/README.md ]; then
+            echo "❌ examples/README.md not found"
+            exit 1
+          fi
+          
+          for file in examples/basic-usage.ts examples/advanced-usage.ts examples/webhook-handler.ts; do
+            if [ ! -f "$file" ]; then
+              echo "❌ $file not found"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All example files exist"

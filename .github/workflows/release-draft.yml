@@ -1,0 +1,117 @@
+name: Draft Release
+
+# This workflow helps prepare release notes
+# Run manually when ready to create a new version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 2.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "Generating changelog since last tag..."
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, showing all commits"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Changes since $LAST_TAG"
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Save to file for multiline output
+          echo "$COMMITS" > changelog.txt
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create draft release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ inputs.version }}
+          release_name: Release v${{ inputs.version }}
+          body: |
+            ## @jowinjohnchemban/hashnode-client v${{ inputs.version }}
+            
+            ### Installation
+            ```bash
+            npm install @jowinjohnchemban/hashnode-client@${{ inputs.version }}
+            ```
+            
+            ### Changes
+            
+            ${{ steps.changelog.outputs.commits }}
+            
+            ### Documentation
+            - [API Reference](https://github.com/${{ github.repository }}/blob/main/docs/API_REFERENCE.md)
+            - [Migration Guide](https://github.com/${{ github.repository }}/blob/main/docs/MIGRATION.md)
+            - [Examples](https://github.com/${{ github.repository }}/tree/main/examples)
+            
+            ### Breaking Changes
+            <!-- List any breaking changes here -->
+            
+            ### New Features
+            <!-- List new features here -->
+            
+            ### Bug Fixes
+            <!-- List bug fixes here -->
+            
+            ### Contributors
+            <!-- Thank contributors here -->
+          draft: true
+          prerelease: ${{ inputs.prerelease }}
+      
+      - name: Instructions
+        run: |
+          echo "✓ Draft release created successfully!"
+          echo ""
+          echo "Next steps:"
+          echo "1. Review and edit the draft release notes at:"
+          echo "   https://github.com/${{ github.repository }}/releases"
+          echo ""
+          echo "2. Update package.json version:"
+          echo "   npm version ${{ inputs.version }}"
+          echo ""
+          echo "3. Commit and push:"
+          echo "   git add package.json package-lock.json"
+          echo "   git commit -m 'chore: bump version to ${{ inputs.version }}'"
+          echo "   git push"
+          echo ""
+          echo "4. Create and push the tag:"
+          echo "   git tag v${{ inputs.version }}"
+          echo "   git push origin v${{ inputs.version }}"
+          echo ""
+          echo "5. The publish workflow will automatically run and:"
+          echo "   - Build the package"
+          echo "   - Publish to npm"
+          echo "   - Update the release notes"

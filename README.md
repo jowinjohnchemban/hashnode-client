@@ -46,7 +46,17 @@ src/lib/api/hashnode/
 ### Basic Usage (Recommended)
 
 ```typescript
-import { getBlogPosts, getBlogPostBySlug, getPublication } from '@/lib/api/hashnode';
+import { 
+  getBlogPosts, 
+  getBlogPostBySlug, 
+  getPublication,
+  searchPosts,
+  getSeries,
+  getSeriesPosts,
+  getStaticPages,
+  getStaticPage,
+  getRecommendedPublications
+} from '@/lib/api/hashnode';
 
 // Fetch blog posts
 const posts = await getBlogPosts(10);
@@ -56,6 +66,21 @@ const post = await getBlogPostBySlug('my-blog-post');
 
 // Fetch publication details
 const publication = await getPublication();
+
+// Search posts
+const searchResults = await searchPosts('GraphQL', 10);
+
+// Fetch series
+const seriesList = await getSeriesList(5);
+const series = await getSeries('my-series-slug');
+const seriesPosts = await getSeriesPosts('my-series-slug', 10);
+
+// Fetch static pages
+const pages = await getStaticPages(10);
+const aboutPage = await getStaticPage('about');
+
+// Fetch recommendations
+const recommended = await getRecommendedPublications();
 ```
 
 ### Advanced Usage (Direct Service Access)
@@ -65,7 +90,46 @@ import { hashnodeService } from '@/lib/api/hashnode';
 
 // Use the singleton service directly
 const posts = await hashnodeService.getBlogPosts(20);
-const adjacentPosts = await hashnodeService.getAdjacentPosts('current-slug');
+const comments = await hashnodeService.getPostComments('post-id', 50);
+const drafts = await hashnodeService.getDrafts(5);
+```
+
+### Webhook Integration
+
+```typescript
+import { 
+  verifyWebhookSignature, 
+  parseWebhookPayload,
+  processWebhook,
+  isPostEvent 
+} from '@/lib/api/hashnode/webhooks';
+
+// In Next.js API route
+export async function POST(req: Request) {
+  const payload = await req.text();
+  const signature = req.headers.get('x-hashnode-signature') || '';
+  const secret = process.env.HASHNODE_WEBHOOK_SECRET!;
+
+  // Verify webhook signature
+  if (!verifyWebhookSignature(payload, signature, secret)) {
+    return new Response('Invalid signature', { status: 401 });
+  }
+
+  // Parse and process webhook
+  const webhookData = parseWebhookPayload(payload);
+  
+  await processWebhook(webhookData, {
+    POST_PUBLISHED: async (data) => {
+      console.log('New post published:', data.data.post?.title);
+      // Revalidate your cache, trigger builds, etc.
+    },
+    POST_UPDATED: async (data) => {
+      console.log('Post updated:', data.data.post?.title);
+    },
+  });
+
+  return new Response('OK', { status: 200 });
+}
 ```
 
 ## 🏗️ Module Components
@@ -194,10 +258,64 @@ jest.mock('@/lib/api/hashnode', () => ({
 
 ## 📚 API Reference
 
-### `getBlogPosts(count?: number): Promise<BlogPost[]>`
+### Core Functions
+
+#### `getBlogPosts(count?: number): Promise<BlogPost[]>`
 Fetch multiple blog posts.
 
-### `getBlogPostBySlug(slug: string): Promise<BlogPostDetail | null>`
+#### `getBlogPostBySlug(slug: string): Promise<BlogPostDetail | null>`
+Fetch a single blog post by slug. Returns full content including HTML/Markdown.
+
+#### `getPublication(): Promise<Publication | null>`
+Fetch publication metadata (title, description, logo, etc.) for SEO.
+
+### Search
+
+#### `searchPosts(query: string, limit?: number): Promise<BlogPost[]>`
+Search for posts within the publication by keyword.
+
+### Series
+
+#### `getSeriesList(limit?: number): Promise<Series[]>`
+Fetch list of all series in the publication.
+
+#### `getSeries(slug: string): Promise<Series | null>`
+Fetch details of a specific series by slug.
+
+#### `getSeriesPosts(seriesSlug: string, limit?: number): Promise<BlogPost[]>`
+Fetch all posts within a series.
+
+### Static Pages
+
+#### `getStaticPages(limit?: number): Promise<StaticPage[]>`
+Fetch all static pages (About, Contact, etc.).
+
+#### `getStaticPage(slug: string): Promise<StaticPage | null>`
+Fetch a single static page by slug.
+
+### Comments
+
+#### `getPostComments(postId: string, limit?: number): Promise<Comment[]>`
+Fetch comments for a specific post.
+
+### Recommendations
+
+#### `getRecommendedPublications(): Promise<RecommendedPublication[]>`
+Fetch publications recommended by this publication.
+
+### Drafts (Authentication Required)
+
+#### `getDrafts(limit?: number): Promise<Draft[]>`
+Fetch draft posts. Requires Hashnode API authentication token.
+
+### Webhooks
+
+See [webhooks.ts](./webhooks.ts) for webhook utilities:
+- `verifyWebhookSignature()` - Verify webhook HMAC signature
+- `parseWebhookPayload()` - Parse and validate webhook payload
+- `processWebhook()` - Process webhook with event handlers
+- `isPostEvent()` - Check if event is post-related
+- `isStaticPageEvent()` - Check if event is static page-related
 Fetch a single post by slug (includes full content).
 
 ### `getPublication(): Promise<Publication | null>`
@@ -273,6 +391,35 @@ This module is:
 - Plugin systems
 
 ---
+## 🤝 Contributing
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) for automatic versioning. When contributing:
+
+```bash
+# Features (minor version bump)
+git commit -m "feat: add new function"
+
+# Bug fixes (patch version bump)
+git commit -m "fix: correct error handling"
+
+# Breaking changes (major version bump)
+git commit -m "feat!: redesign API"
+```
+
+See [Conventional Commits Guide](./.github/CONVENTIONAL_COMMITS.md) for details.
+
+---
+## � Documentation
+
+For complete documentation, see the [docs/](./docs/) folder:
+
+- **[API Reference](./docs/API_REFERENCE.md)** - Complete function documentation
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Contributing and development workflow
+- **[Migration Guide](./docs/MIGRATION.md)** - Version upgrade guide
+- **[Feature List](./docs/FEATURES.md)** - All features and release notes
+- **[Examples](./examples/)** - Practical code examples
+
+---
 
 ## 📄 License
 
@@ -284,3 +431,4 @@ MIT License - feel free to use this module in your projects!
 - GitHub: [@jowinjohnchemban](https://github.com/jowinjohnchemban)
 
 *Built with the help of AI - GitHub Copilot*
+

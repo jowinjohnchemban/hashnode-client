@@ -1,26 +1,28 @@
+"use strict";
 /**
  * GraphQL Query Builder for Hashnode API
- * 
+ *
  * **Query Construction Layer** providing reusable GraphQL query templates.
  * Uses field fragments for DRY (Don't Repeat Yourself) principle.
- * 
+ *
  * @module lib/api/hashnode/queries
- * 
+ *
  * @architecture
  * - **Builder Pattern**: Constructs complex GraphQL queries
  * - **Fragment Composition**: Reusable field sets
  * - **Type Safety**: Ensures queries match type definitions
- * 
+ *
  * @example Query Fragments
  * ```
  * POST_BASE_FIELDS    → Basic post data (id, title, excerpt)
  * POST_EXTENDED_FIELDS → Base + tags
  * POST_FULL_FIELDS    → Base + content (html/markdown)
  * ```
- * 
+ *
  * @see {@link https://apidocs.hashnode.com/} Hashnode GraphQL API Docs
  */
-
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.HashnodeQueries = void 0;
 /** Base fields for blog posts */
 const POST_BASE_FIELDS = `
   id
@@ -32,31 +34,27 @@ const POST_BASE_FIELDS = `
   readTimeInMinutes
   author { name username profilePicture }
 `;
-
 /** Extended fields including tags */
 const POST_EXTENDED_FIELDS = `
   ${POST_BASE_FIELDS}
   tags { name slug }
 `;
-
 /** Full post fields including content */
 const POST_FULL_FIELDS = `
   ${POST_BASE_FIELDS}
   content { html markdown text }
 `;
-
 /** Full post fields with tags */
 const POST_FULL_EXTENDED_FIELDS = `
   ${POST_EXTENDED_FIELDS}
   content { html markdown text }
 `;
-
-export class HashnodeQueries {
-  /**
-   * Query to fetch publication details for SEO
-   */
-  static getPublication(): string {
-    return `
+class HashnodeQueries {
+    /**
+     * Query to fetch publication details for SEO
+     */
+    static getPublication() {
+        return `
       query GetPublication($host: String!) {
         publication(host: $host) {
           id
@@ -71,15 +69,13 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch multiple blog posts
-   */
-  static getBlogPosts(extended = true): string {
-    const fields = extended ? POST_EXTENDED_FIELDS : POST_BASE_FIELDS;
-    
-    return `
+    }
+    /**
+     * Query to fetch multiple blog posts
+     */
+    static getBlogPosts(extended = true) {
+        const fields = extended ? POST_EXTENDED_FIELDS : POST_BASE_FIELDS;
+        return `
       query GetBlogPosts($host: String!, $first: Int!) {
         publication(host: $host) {
           posts(first: $first) {
@@ -93,15 +89,13 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch a single blog post by slug
-   */
-  static getBlogPostBySlug(extended = true): string {
-    const fields = extended ? POST_FULL_EXTENDED_FIELDS : POST_FULL_FIELDS;
-    
-    return `
+    }
+    /**
+     * Query to fetch a single blog post by slug
+     */
+    static getBlogPostBySlug(extended = true) {
+        const fields = extended ? POST_FULL_EXTENDED_FIELDS : POST_FULL_FIELDS;
+        return `
       query GetBlogPost($host: String!, $slug: String!) {
         publication(host: $host) {
           post(slug: $slug) {
@@ -110,13 +104,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to search posts within a publication
-   */
-  static searchPosts(): string {
-    return `
+    }
+    /**
+     * Query to search posts within a publication
+     */
+    static searchPosts() {
+        return `
       query SearchPostsOfPublication($first: Int!, $after: String, $filter: SearchPostsOfPublicationFilter!) {
         searchPostsOfPublication(first: $first, after: $after, filter: $filter) {
           edges {
@@ -129,13 +122,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch series list
-   */
-  static getSeriesList(): string {
-    return `
+    }
+    /**
+     * Query to fetch series list
+     */
+    static getSeriesList() {
+        return `
       query GetSeriesList($host: String!, $first: Int!, $after: String) {
         publication(host: $host) {
           seriesList(first: $first, after: $after) {
@@ -154,13 +146,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch a single series by slug
-   */
-  static getSeries(): string {
-    return `
+    }
+    /**
+     * Query to fetch a single series by slug
+     */
+    static getSeries() {
+        return `
       query GetSeries($host: String!, $slug: String!) {
         publication(host: $host) {
           series(slug: $slug) {
@@ -172,13 +163,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch posts in a series
-   */
-  static getSeriesPosts(): string {
-    return `
+    }
+    /**
+     * Query to fetch posts in a series
+     */
+    static getSeriesPosts() {
+        return `
       query GetSeriesPosts($host: String!, $seriesSlug: String!, $first: Int!, $after: String) {
         publication(host: $host) {
           series(slug: $seriesSlug) {
@@ -196,13 +186,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch static pages
-   */
-  static getStaticPages(): string {
-    return `
+    }
+    /**
+     * Query to fetch static pages
+     */
+    static getStaticPages() {
+        return `
       query GetStaticPages($host: String!, $first: Int!, $after: String) {
         publication(host: $host) {
           staticPages(first: $first, after: $after) {
@@ -222,13 +211,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch a single static page
-   */
-  static getStaticPage(): string {
-    return `
+    }
+    /**
+     * Query to fetch a single static page
+     */
+    static getStaticPage() {
+        return `
       query GetStaticPage($host: String!, $slug: String!) {
         publication(host: $host) {
           staticPage(slug: $slug) {
@@ -241,13 +229,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch comments on a post
-   */
-  static getPostComments(): string {
-    return `
+    }
+    /**
+     * Query to fetch comments on a post
+     */
+    static getPostComments() {
+        return `
       query GetPostComments($postId: ID!, $first: Int!, $after: String) {
         post(id: $postId) {
           comments(first: $first, after: $after) {
@@ -268,13 +255,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch recommended publications
-   */
-  static getRecommendedPublications(): string {
-    return `
+    }
+    /**
+     * Query to fetch recommended publications
+     */
+    static getRecommendedPublications() {
+        return `
       query GetRecommendedPublications($host: String!) {
         publication(host: $host) {
           recommendedPublications {
@@ -288,13 +274,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Query to fetch drafts
-   */
-  static getDrafts(): string {
-    return `
+    }
+    /**
+     * Query to fetch drafts
+     */
+    static getDrafts() {
+        return `
       query GetDrafts($host: String!, $first: Int!, $after: String) {
         publication(host: $host) {
           drafts(first: $first, after: $after) {
@@ -314,13 +299,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Mutation to create a webhook
-   */
-  static createWebhook(): string {
-    return `
+    }
+    /**
+     * Mutation to create a webhook
+     */
+    static createWebhook() {
+        return `
       mutation CreateWebhook($input: CreateWebhookInput!) {
         createWebhook(input: $input) {
           webhook {
@@ -330,13 +314,12 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Mutation to update a webhook
-   */
-  static updateWebhook(): string {
-    return `
+    }
+    /**
+     * Mutation to update a webhook
+     */
+    static updateWebhook() {
+        return `
       mutation UpdateWebhook($input: UpdateWebhookInput!) {
         updateWebhook(input: $input) {
           webhook {
@@ -345,31 +328,31 @@ export class HashnodeQueries {
         }
       }
     `;
-  }
-
-  /**
-   * Mutation to delete a webhook
-   */
-  static deleteWebhook(): string {
-    return `
+    }
+    /**
+     * Mutation to delete a webhook
+     */
+    static deleteWebhook() {
+        return `
       mutation DeleteWebhook($id: ID!) {
         deleteWebhook(id: $id) {
           webhook { id }
         }
       }
     `;
-  }
-
-  /**
-   * Mutation to trigger webhook test
-   */
-  static triggerWebhookTest(): string {
-    return `
+    }
+    /**
+     * Mutation to trigger webhook test
+     */
+    static triggerWebhookTest() {
+        return `
       mutation TriggerWebhookTest($input: TriggerWebhookTestInput!) {
         triggerWebhookTest(input: $input) {
           webhook { id url events }
         }
       }
     `;
-  }
+    }
 }
+exports.HashnodeQueries = HashnodeQueries;
+//# sourceMappingURL=queries.js.map
