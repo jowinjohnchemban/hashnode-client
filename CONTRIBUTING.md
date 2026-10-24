@@ -80,7 +80,7 @@ The project uses [Conventional Commits](https://www.conventionalcommits.org/). P
 
 Releases are created only from `main`, automatically, by [semantic-release](https://semantic-release.gitbook.io/). There are no release PRs and no manual steps:
 
-1. A PR is squash-merged into `main` once the `CI passed` check succeeds.
+1. A PR is squash-merged into `main` once the `CI passed` and `CodeRabbit` checks succeed and its review conversations are resolved.
 2. The **Release** workflow runs on the push to `main` and re-runs `pnpm check` and the integration tests.
 3. semantic-release reads the commit messages since the last `vX.Y.Z` tag. `fix:` releases a patch, `feat:` a minor, and `feat!:` or a `BREAKING CHANGE:` footer a major version. Other types don't release.
 4. If a release is due, it publishes to npm with provenance, tags `vX.Y.Z` and creates a GitHub release with generated notes.
