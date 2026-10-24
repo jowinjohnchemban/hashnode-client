@@ -21,15 +21,15 @@ describe('transport', () => {
     const client = new HashnodeClient({ token: 'secret', headers: { 'x-extra': '1' }, fetch });
 
     await client.request(QUERY);
-    const headers = requests[0]!.init.headers as Record<string, string>;
-    expect(headers.authorization).toBe('secret');
-    expect(headers['x-extra']).toBe('1');
+    const { headers } = requests[0]!;
+    expect(headers.get('authorization')).toBe('secret');
+    expect(headers.get('x-extra')).toBe('1');
   });
 
   it('omits the authorization header without a token', async () => {
     const { fetch, requests } = mockFetch(json({ data: {} }));
     await new HashnodeClient({ token: '', fetch }).request(QUERY);
-    expect(requests[0]!.init.headers).not.toHaveProperty('authorization');
+    expect(requests[0]!.headers.has('authorization')).toBe(false);
   });
 
   it('forwards Next.js cache options, preferring per-request values', async () => {

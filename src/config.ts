@@ -79,15 +79,36 @@ function parseTimeout(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+/**
+ * Accepts a host written as a URL (`https://blog.example.com/`) and returns the
+ * bare, lower-case host name Hashnode expects (`blog.example.com`).
+ */
+export function normalizeHost(host: string | undefined): string | undefined {
+  const value = host
+    ?.trim()
+    .replace(/^[a-z][a-z\d+.-]*:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .toLowerCase();
+  return value === '' ? undefined : value;
+}
+
 /** Merges explicit options with environment variables and defaults. */
 export function resolveConfig(options: HashnodeClientOptions = {}): ResolvedConfig {
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') {
     throw new TypeError('No fetch implementation available. Pass one via the `fetch` option.');
   }
+  if (
+    options.timeoutMs !== undefined &&
+    !(Number.isFinite(options.timeoutMs) && options.timeoutMs > 0)
+  ) {
+    throw new RangeError(
+      `\`timeoutMs\` must be a positive number, received ${String(options.timeoutMs)}`,
+    );
+  }
 
   return {
-    host: options.host ?? env('HASHNODE_PUBLICATION_HOST'),
+    host: normalizeHost(options.host ?? env('HASHNODE_PUBLICATION_HOST')),
     publicationId: options.publicationId ?? env('HASHNODE_PUBLICATION_ID'),
     token: options.token ?? env('HASHNODE_ACCESS_TOKEN'),
     endpoint: options.endpoint ?? env('HASHNODE_API_URL') ?? DEFAULT_ENDPOINT,

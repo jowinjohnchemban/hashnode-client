@@ -22,7 +22,7 @@ describe('configuration', () => {
     expect(client.host).toBe('env.example.com');
     expect(requests[0]!.url).toBe('https://gql.example.com/');
     expect(requests[0]!.body.variables.host).toBe('env.example.com');
-    expect((requests[0]!.init.headers as Record<string, string>).authorization).toBe('env-token');
+    expect(requests[0]!.headers.get('authorization')).toBe('env-token');
   });
 
   it('prefers explicit options over the environment', () => {

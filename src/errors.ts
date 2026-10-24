@@ -50,7 +50,18 @@ export class HashnodeError extends Error {
   }
 }
 
-/** Type guard for {@link HashnodeError}. */
+/**
+ * Type guard for {@link HashnodeError}.
+ *
+ * Unlike `instanceof`, this also recognises errors from another copy of the
+ * package, for example when an app loads both the ESM and CommonJS builds.
+ */
 export function isHashnodeError(error: unknown): error is HashnodeError {
-  return error instanceof HashnodeError;
+  if (error instanceof HashnodeError) return true;
+  return (
+    error instanceof Error &&
+    error.name === 'HashnodeError' &&
+    typeof (error as Partial<HashnodeError>).code === 'string' &&
+    Array.isArray((error as Partial<HashnodeError>).errors)
+  );
 }

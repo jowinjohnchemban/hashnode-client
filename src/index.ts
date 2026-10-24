@@ -13,7 +13,7 @@
  */
 
 import { HashnodeClient } from './client';
-import { HashnodeError } from './errors';
+import { isHashnodeError } from './errors';
 import type {
   BlogPost,
   BlogPostDetail,
@@ -66,7 +66,7 @@ async function safely<T>(name: string, fallback: T, run: () => Promise<T>): Prom
   try {
     return await run();
   } catch (error) {
-    const detail = error instanceof HashnodeError ? `${error.code}: ${error.message}` : error;
+    const detail = isHashnodeError(error) ? `${error.code}: ${error.message}` : error;
     console.error(`[hashnode-client] ${name} failed`, detail);
     return fallback;
   }

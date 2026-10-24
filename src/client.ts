@@ -12,7 +12,7 @@ import {
   type HashnodeClientOptions,
   type ResolvedConfig,
 } from './config';
-import { HashnodeError } from './errors';
+import { HashnodeError, isHashnodeError } from './errors';
 import * as Q from './queries';
 import { executeGraphQL, type RequestOptions } from './transport';
 import type {
@@ -65,7 +65,7 @@ async function orIfNotFound<T, F>(promise: Promise<T>, fallback: F): Promise<T |
   try {
     return await promise;
   } catch (error) {
-    if (error instanceof HashnodeError && error.code === 'NOT_FOUND') return fallback;
+    if (isHashnodeError(error) && error.code === 'NOT_FOUND') return fallback;
     throw error;
   }
 }
@@ -198,6 +198,7 @@ export class HashnodeClient {
     requestOptions?: RequestOptions,
   ): AsyncGenerator<BlogPost, void, undefined> {
     let after: string | null = null;
+    const seen = new Set<string>();
     do {
       const page: Page<BlogPost> = await this.getPosts(
         { ...options, first: options.first ?? MAX_PAGE_SIZE, after },
@@ -205,6 +206,15 @@ export class HashnodeClient {
       );
       yield* page.items;
       after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+      if (after !== null) {
+        // Guard against a cursor that never advances.
+        if (seen.has(after)) {
+          throw new HashnodeError('Pagination cursor repeated; stopping to avoid a loop', {
+            code: 'INVALID_RESPONSE',
+          });
+        }
+        seen.add(after);
+      }
     } while (after);
   }
 
