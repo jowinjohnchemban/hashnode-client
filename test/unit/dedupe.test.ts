@@ -344,3 +344,23 @@ describe('no limit on sharing', () => {
     expect(new Set(results).size).toBe(10_000); // every caller has its own copy
   });
 });
+
+describe('invalid request input', () => {
+  it.each([true, false])('rejects instead of throwing (dedupe: %s)', async (dedupe) => {
+    const { fetch } = controlledFetch();
+    const client = new HashnodeClient({ host: HOST, fetch, dedupe });
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    const calls = [
+      () => client.request('query { a }', { big: 1n }),
+      () => client.request('query { a }', circular),
+      () => client.request(42 as unknown as string),
+    ];
+    for (const call of calls) {
+      let promise: Promise<unknown> | undefined;
+      expect(() => (promise = call())).not.toThrow();
+      await expect(promise).rejects.toBeInstanceOf(Error);
+    }
+  });
+});

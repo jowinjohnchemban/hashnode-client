@@ -149,10 +149,17 @@ const hashnode = new HashnodeClient({ host: 'blog.example.com' });
 
 createServer(async (req, res) => {
   const slug = new URL(req.url ?? '/', 'http://localhost').pathname.slice(1);
-  // Concurrent requests for the same slug share one Hashnode API call.
-  const post = slug ? await hashnode.getPost(slug) : null;
-  res.writeHead(post ? 200 : 404, { 'content-type': 'application/json' });
-  res.end(JSON.stringify(post));
+  try {
+    // Concurrent requests for the same slug share one Hashnode API call.
+    const post = slug ? await hashnode.getPost(slug) : null;
+    res.writeHead(post ? 200 : 404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(post));
+  } catch (error) {
+    // Always handle errors here: a rejected promise in a request listener is
+    // an unhandled rejection, which stops the Node.js process by default.
+    console.error(error);
+    res.writeHead(502).end();
+  }
 }).listen(3000);
 ```
 

@@ -121,19 +121,28 @@ export class HashnodeClient {
     variables: Record<string, unknown> = {},
     options: RequestOptions = {},
   ): Promise<T> {
-    if (!this.#config.dedupe || !isQueryOperation(query)) {
-      return executeGraphQL<T>(this.#config, query, variables, options);
+    try {
+      if (typeof query !== 'string' || !query.trim()) {
+        throw new TypeError('`query` must be a non-empty GraphQL document string');
+      }
+      if (!this.#config.dedupe || !isQueryOperation(query)) {
+        return executeGraphQL<T>(this.#config, query, variables, options);
+      }
+      const cache = options.cache ?? this.#config.cache;
+      const next = options.next ?? this.#config.next;
+      const key = JSON.stringify([query, variables, cache ?? null, next ?? null]);
+      // Each caller's signal is applied separately; the shared request is only
+      // cancelled once every caller waiting for it has aborted.
+      return this.#inFlight.run(
+        key,
+        (signal) => executeGraphQL<T>(this.#config, query, variables, { cache, next, signal }),
+        options.signal,
+      );
+    } catch (error) {
+      // Report invalid input (a non-string query, variables JSON can't encode)
+      // as a rejection, like every other failure, never as a synchronous throw.
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
-    const cache = options.cache ?? this.#config.cache;
-    const next = options.next ?? this.#config.next;
-    const key = JSON.stringify([query, variables, cache ?? null, next ?? null]);
-    // Each caller's signal is applied separately; the shared request is only
-    // cancelled once every caller waiting for it has aborted.
-    return this.#inFlight.run(
-      key,
-      (signal) => executeGraphQL<T>(this.#config, query, variables, { cache, next, signal }),
-      options.signal,
-    );
   }
 
   #requireHost(): string {
