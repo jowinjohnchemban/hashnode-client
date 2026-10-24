@@ -33,8 +33,9 @@ describe('configuration validation', () => {
     ['  blog.example.com  ', 'blog.example.com'],
     ['blog.example.com/', 'blog.example.com'],
     ['HTTPS://blog.example.com', 'blog.example.com'],
-    ['https://', undefined],
-    ['/', undefined],
+    ['https://Blog.Example.com?ref=home', 'blog.example.com'],
+    ['blog.example.com:3000/posts#top', 'blog.example.com'],
+    ['bücher.example', 'xn--bcher-kva.example'],
     ['   ', undefined],
     ['', undefined],
     [undefined, undefined],
@@ -42,10 +43,17 @@ describe('configuration validation', () => {
     expect(normalizeHost(input)).toBe(expected);
   });
 
+  it.each(['https://', '/', 'blog example.com'])('rejects invalid host %j', (host) => {
+    expect(() => normalizeHost(host)).toThrow(TypeError);
+    expect(() => new HashnodeClient({ host, fetch: mockFetch().fetch })).toThrow(
+      /Invalid publication host/,
+    );
+  });
+
   it('normalizes hostile input in linear time', () => {
     const started = performance.now();
     expect(normalizeHost(`a${'/'.repeat(100_000)}`)).toBe('a');
-    expect(normalizeHost('/'.repeat(100_000))).toBeUndefined();
+    expect(() => normalizeHost('/'.repeat(100_000))).toThrow(TypeError);
     expect(performance.now() - started).toBeLessThan(100);
   });
 
@@ -144,6 +152,32 @@ describe('aborts and timeouts', () => {
     ).rejects.toMatchObject({ code: 'ABORTED' });
   });
 
+  it('removes fallback listeners from a reused signal once requests settle', async () => {
+    vi.stubGlobal(
+      'AbortSignal',
+      Object.assign(Object.create(AbortSignal) as typeof AbortSignal, {
+        any: undefined,
+        timeout: AbortSignal.timeout.bind(AbortSignal),
+      }),
+    );
+    const { signal } = new AbortController();
+    const added = vi.spyOn(signal, 'addEventListener');
+    const removed = vi.spyOn(signal, 'removeEventListener');
+    const { fetch } = mockFetch(
+      json({ data: {} }),
+      json({ errors: [{ message: 'x' }] }),
+      new TypeError('offline'),
+    );
+    const client = new HashnodeClient({ fetch });
+
+    await client.request(QUERY, {}, { signal });
+    await client.request(QUERY, {}, { signal }).catch(() => undefined);
+    await client.request(QUERY, {}, { signal }).catch(() => undefined);
+
+    expect(added).toHaveBeenCalledTimes(3);
+    expect(removed).toHaveBeenCalledTimes(3);
+  });
+
   it('times out with a caller signal that never aborts', async () => {
     const pending = new HashnodeClient({ fetch: hangingFetch, timeoutMs: 20 }).request(
       QUERY,
@@ -201,7 +235,7 @@ describe('iteratePosts', () => {
       }
     };
     await expect(iterate()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
-    expect(ids).toEqual(['1', '1']);
+    expect(ids).toEqual(['1']);
   });
 
   it('stops when hasNextPage is true but there is no cursor', async () => {

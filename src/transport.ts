@@ -24,31 +24,42 @@ interface RequestSignals {
   signal: AbortSignal;
   timeout: AbortSignal;
   caller: AbortSignal | undefined;
+  /** Removes listeners added to combine the signals. Call once the request settles. */
+  cleanup: () => void;
 }
 
-function anySignal(signals: AbortSignal[]): AbortSignal {
-  if (typeof AbortSignal.any === 'function') return AbortSignal.any(signals);
-  // Fallback for runtimes without AbortSignal.any.
+function anySignal(signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
+  if (typeof AbortSignal.any === 'function') {
+    return { signal: AbortSignal.any(signals), cleanup: () => undefined };
+  }
+  // Fallback for runtimes without AbortSignal.any. The listeners are removed on
+  // cleanup so a long-lived caller signal doesn't accumulate them.
   const controller = new AbortController();
+  const listeners: [AbortSignal, () => void][] = [];
+  const cleanup = () => {
+    for (const [signal, listener] of listeners) signal.removeEventListener('abort', listener);
+    listeners.length = 0;
+  };
   for (const signal of signals) {
     if (signal.aborted) {
       controller.abort(signal.reason);
       break;
     }
-    signal.addEventListener(
-      'abort',
-      () => {
-        controller.abort(signal.reason);
-      },
-      { once: true },
-    );
+    const listener = () => {
+      controller.abort(signal.reason);
+      cleanup();
+    };
+    signal.addEventListener('abort', listener, { once: true });
+    listeners.push([signal, listener]);
   }
-  return controller.signal;
+  if (controller.signal.aborted) cleanup();
+  return { signal: controller.signal, cleanup };
 }
 
 function createSignals(timeoutMs: number, caller: AbortSignal | undefined): RequestSignals {
   const timeout = AbortSignal.timeout(timeoutMs);
-  return { signal: caller ? anySignal([caller, timeout]) : timeout, timeout, caller };
+  if (!caller) return { signal: timeout, timeout, caller, cleanup: () => undefined };
+  return { ...anySignal([caller, timeout]), timeout, caller };
 }
 
 /** Maps a failure while fetching or reading the response to a HashnodeError. */
@@ -118,20 +129,24 @@ export async function executeGraphQL<T>(
   let response: Response;
   let body: GraphQLResponseBody<T> | null;
   try {
-    response = await config.fetch(config.endpoint, init);
-  } catch (error) {
-    throw toTransportError(error, signals, config.timeoutMs);
-  }
-  try {
-    body = (await response.json()) as GraphQLResponseBody<T> | null;
-  } catch (error) {
-    if (signals.signal.aborted) throw toTransportError(error, signals, config.timeoutMs);
-    if (!response.ok) throw httpError(response, error);
-    throw new HashnodeError('Response was not valid JSON', {
-      code: 'INVALID_RESPONSE',
-      status: response.status,
-      cause: error,
-    });
+    try {
+      response = await config.fetch(config.endpoint, init);
+    } catch (error) {
+      throw toTransportError(error, signals, config.timeoutMs);
+    }
+    try {
+      body = (await response.json()) as GraphQLResponseBody<T> | null;
+    } catch (error) {
+      if (signals.signal.aborted) throw toTransportError(error, signals, config.timeoutMs);
+      if (!response.ok) throw httpError(response, error);
+      throw new HashnodeError('Response was not valid JSON', {
+        code: 'INVALID_RESPONSE',
+        status: response.status,
+        cause: error,
+      });
+    }
+  } finally {
+    signals.cleanup();
   }
 
   const errors = Array.isArray(body?.errors) ? body.errors : [];

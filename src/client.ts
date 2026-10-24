@@ -204,10 +204,10 @@ export class HashnodeClient {
         { ...options, first: options.first ?? MAX_PAGE_SIZE, after },
         requestOptions,
       );
-      yield* page.items;
       after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
       if (after !== null) {
-        // Guard against a cursor that never advances.
+        // Guard against a cursor that never advances. Checked before yielding
+        // so a repeated page's posts aren't emitted twice.
         if (seen.has(after)) {
           throw new HashnodeError('Pagination cursor repeated; stopping to avoid a loop', {
             code: 'INVALID_RESPONSE',
@@ -215,6 +215,7 @@ export class HashnodeClient {
         }
         seen.add(after);
       }
+      yield* page.items;
     } while (after);
   }
 

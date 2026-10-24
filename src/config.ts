@@ -80,18 +80,23 @@ function parseTimeout(value: string | undefined): number | undefined {
 }
 
 /**
- * Accepts a host written as a URL (`https://blog.example.com/`) and returns the
- * bare, lower-case host name Hashnode expects (`blog.example.com`).
+ * Returns the bare host name Hashnode expects (`blog.example.com`) from a host
+ * or URL, dropping any scheme, port, path, query and fragment.
+ *
+ * @throws {TypeError} If the value is not a valid host.
  */
 export function normalizeHost(host: string | undefined): string | undefined {
-  let value = host?.trim().toLowerCase();
+  const value = host?.trim();
   if (!value) return undefined;
-  const scheme = /^[a-z][a-z\d+.-]*:\/\//.exec(value);
-  if (scheme) value = value.slice(scheme[0].length);
-  // indexOf instead of a regex keeps this linear for any input.
-  const slash = value.indexOf('/');
-  if (slash !== -1) value = value.slice(0, slash);
-  return value === '' ? undefined : value;
+  const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(value);
+  let hostname = '';
+  try {
+    ({ hostname } = new URL(hasScheme ? value : `https://${value}`));
+  } catch {
+    // Reported below.
+  }
+  if (!hostname) throw new TypeError(`Invalid publication host: "${value}"`);
+  return hostname;
 }
 
 /** Merges explicit options with environment variables and defaults. */
