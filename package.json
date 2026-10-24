@@ -85,7 +85,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "security": "node scripts/check-invisible-characters.mjs && pnpm audit --audit-level high",
+    "security": "node scripts/security-check.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --project unit",

@@ -11,17 +11,17 @@ pnpm install
 pnpm check   # format, lint, typecheck, unit tests, build and package validation
 ```
 
-| Script                  | What it does                                                                                                                 |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`            | Bundle `src/` to `dist/` (ESM + CJS + types) with tsdown                                                                     |
-| `pnpm test`             | Unit tests (no network)                                                                                                      |
-| `pnpm test:coverage`    | Unit tests with a coverage report                                                                                            |
-| `pnpm test:integration` | Tests against the live Hashnode API (see [Testing](#testing))                                                                |
-| `pnpm lint`             | ESLint (type-aware)                                                                                                          |
-| `pnpm security`         | Fails on invisible or bidirectional characters in any file (Trojan Source) and on high or critical advisories (`pnpm audit`) |
-| `pnpm format`           | Prettier                                                                                                                     |
-| `pnpm typecheck`        | `tsc --noEmit` over source, tests and examples                                                                               |
-| `pnpm lint:package`     | publint, Are The Types Wrong, and a check of the tarball's files                                                             |
+| Script                  | What it does                                                                                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`            | Bundle `src/` to `dist/` (ESM + CJS + types) with tsdown                                                                                                                                                                                       |
+| `pnpm test`             | Unit tests (no network)                                                                                                                                                                                                                        |
+| `pnpm test:coverage`    | Unit tests with a coverage report                                                                                                                                                                                                              |
+| `pnpm test:integration` | Tests against the live Hashnode API (see [Testing](#testing))                                                                                                                                                                                  |
+| `pnpm lint`             | ESLint (type-aware)                                                                                                                                                                                                                            |
+| `pnpm security`         | Security checklist mapped to OWASP: invisible characters, committed secrets, vulnerable dependencies, runtime dependencies, workflow hardening (pinned actions, permissions, untrusted input, `pull_request_target`) and unsafe APIs in `src/` |
+| `pnpm format`           | Prettier                                                                                                                                                                                                                                       |
+| `pnpm typecheck`        | `tsc --noEmit` over source, tests and examples                                                                                                                                                                                                 |
+| `pnpm lint:package`     | publint, Are The Types Wrong, and a check of the tarball's files                                                                                                                                                                               |
 
 Use pnpm only. Don't commit `package-lock.json` or `yarn.lock`.
 
