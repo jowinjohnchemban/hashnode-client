@@ -13,7 +13,9 @@
     "typescript",
     "mcp",
     "model-context-protocol",
-    "ai"
+    "ai",
+    "agent-skill",
+    "skills"
   ],
   "homepage": "https://github.com/jowinjohnchemban/hashnode-client#readme",
   "bugs": {
@@ -77,13 +79,14 @@
     "hashnode-mcp": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . && skills-ref validate skills/hashnode-client",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -107,6 +110,7 @@
     "prettier": "^3.9.10",
     "publint": "^0.3.25",
     "semantic-release": "^25.0.9",
+    "skills-ref": "^0.1.5",
     "tsdown": "^0.23.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",

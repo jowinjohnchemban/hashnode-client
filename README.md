@@ -20,6 +20,7 @@ A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL
 - [Install](#install)
 - [Quick start](#quick-start)
 - [Usage](#usage)
+- [AI coding agents](#ai-coding-agents)
 - [Documentation](#documentation)
 - [Compatibility](#compatibility)
 - [Versioning](#versioning)
@@ -146,6 +147,18 @@ const fetch = async () =>
   Response.json({ data: { publication: { post: { id: '1', title: 'Hello' } } } });
 const hashnode = new HashnodeClient({ host: 'blog.example.com', fetch });
 ```
+
+## AI coding agents
+
+The package includes an [Agent Skill](https://agentskills.io) that teaches coding agents such as Claude Code, GitHub Copilot, Cursor and Codex how to integrate it correctly. It covers setup, the Pro-plan requirement, pagination, error codes, Next.js caching, webhooks and the MCP server. Install it into your project with the [`skills` CLI](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add jowinjohnchemban/hashnode-client
+# or from the installed package, matching your version:
+npx skills add ./node_modules/@jowinjohnchemban/hashnode-client
+```
+
+The skill lives in [`skills/hashnode-client`](skills/hashnode-client/SKILL.md) and is tested against the code, so it stays accurate.
 
 ## Documentation
 
