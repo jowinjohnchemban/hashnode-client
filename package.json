@@ -1,6 +1,6 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "1.0.13",
+  "version": "2.0.0",
   "description": "Typed, zero-dependency Hashnode GraphQL API client for Node.js, Next.js and edge runtimes, with webhook verification.",
   "keywords": [
     "hashnode",
