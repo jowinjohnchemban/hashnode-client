@@ -531,10 +531,13 @@ const FREE_TEXT_ARGUMENTS = new Set(['query']);
  * length so the logs can't capture secrets someone pasted into a search.
  */
 function redactArguments(args: Args, properties: Record<string, unknown>): Args {
+  let unknown = 0;
   return Object.fromEntries(
     Object.entries(args).map(([key, value]) => {
       const schema = properties[key];
-      if (!isRecord(schema)) return [key, '[redacted: unknown argument]'];
+      // Unknown argument names are chosen by the caller, so the name is
+      // redacted too, not just the value.
+      if (!isRecord(schema)) return [`[unknown argument ${++unknown}]`, '[redacted]'];
       if (FREE_TEXT_ARGUMENTS.has(key)) {
         return [key, `[redacted: ${typeof value === 'string' ? value.length : 0} characters]`];
       }

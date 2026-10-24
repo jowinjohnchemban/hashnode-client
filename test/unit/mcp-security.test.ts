@@ -451,7 +451,7 @@ describe('audit redaction of invalid input', () => {
       {
         slug: '[redacted: 22 characters]',
         format: 'html',
-        extra: '[redacted: unknown argument]',
+        '[unknown argument 1]': '[redacted]',
       },
       { tags: ['js', '[redacted: 10 characters]'], after: '[redacted: object]', first: 2 },
     ]);
@@ -468,5 +468,23 @@ describe('audit redaction of invalid input', () => {
     });
     await call(mcp, 'search_posts', { query: { secret: 'value' } });
     expect(events[0]!.arguments).toEqual({ query: '[redacted: 0 characters]' });
+  });
+});
+
+describe('audit redaction of argument names', () => {
+  it('never logs caller-chosen unknown argument names', async () => {
+    const events: McpToolCallEvent[] = [];
+    const mcp = createMcpServer({
+      host: HOST,
+      fetch: routedFetch({}).fetch,
+      onToolCall: (event) => events.push(event),
+    });
+    await call(mcp, 'get_post', { slug: 'hello', 'api-key-sk-12345': 1, 'second secret': 2 });
+    expect(events[0]!.arguments).toEqual({
+      slug: 'hello',
+      '[unknown argument 1]': '[redacted]',
+      '[unknown argument 2]': '[redacted]',
+    });
+    expect(JSON.stringify(events)).not.toMatch(/sk-12345|second secret/);
   });
 });
