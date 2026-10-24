@@ -104,7 +104,7 @@ You can also do this on npmjs.com under **Package → Settings → Trusted publi
 The repository is configured with:
 
 - an `npm` environment that only `main` can deploy to
-- a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the `CI passed` check
+- a `main` ruleset that blocks force pushes and deletion, requires a pull request, and requires the `CI passed` and `CodeRabbit` checks and resolved review conversations
 - a tag ruleset that stops `v*` release tags from being moved or deleted
 
 ## Pull request checks
@@ -115,4 +115,9 @@ CI only runs what a change needs:
 - Dependency review runs only when `package.json` or `pnpm-lock.yaml` change.
 - CodeQL and the API integration tests run only when code changes.
 
-`CI passed` summarises the CI jobs and is the only required check; skipped jobs count as passed.
+Two checks are required before a PR can merge into `main`:
+
+- **`CI passed`** summarises the CI jobs; skipped jobs count as passed.
+- **`CodeRabbit`** is an automated code review of every PR into `main`, re-run on each push. Auto-merge waits for it, and its review comments must be resolved before merging (fix the code, or reply and resolve the thread). Configuration is in [`.coderabbit.yaml`](.coderabbit.yaml). Comment `@coderabbitai review` to re-run it.
+
+Pushes to other branches, and PRs into other branches, skip both.
