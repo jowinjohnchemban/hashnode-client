@@ -32,6 +32,8 @@ HASHNODE_ACCESS_TOKEN=...                    # only for drafts; server-side only
 HASHNODE_WEBHOOK_SECRET=...                  # only for webhooks
 ```
 
+Frameworks such as Next.js load `.env` automatically. Plain Node.js doesn't: start the app with `node --env-file=.env app.js` (Node.js 20.6+), or load it with a library such as `dotenv`. Without it, `HASHNODE_PUBLICATION_HOST` is unset and calls fail with `CONFIG_ERROR`.
+
 Create **one** client per app, in a server-only module, and reuse it:
 
 ```ts
