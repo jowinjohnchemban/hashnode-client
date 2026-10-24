@@ -80,7 +80,7 @@ The project uses [Conventional Commits](https://www.conventionalcommits.org/). P
 
 Releases are created only from `main`, automatically, by [semantic-release](https://semantic-release.gitbook.io/). There are no release PRs and no manual steps:
 
-1. A PR is squash-merged into `main` once the `CI passed` check succeeds.
+1. A PR is squash-merged into `main` once the `CI passed` and `CodeRabbit` checks succeed and its review conversations are resolved.
 2. The **Release** workflow runs on the push to `main` and re-runs `pnpm check` and the integration tests.
 3. semantic-release reads the commit messages since the last `vX.Y.Z` tag. `fix:` releases a patch, `feat:` a minor, and `feat!:` or a `BREAKING CHANGE:` footer a major version. Other types don't release.
 4. If a release is due, it publishes to npm with provenance, tags `vX.Y.Z` and creates a GitHub release with generated notes.
@@ -104,7 +104,7 @@ You can also do this on npmjs.com under **Package → Settings → Trusted publi
 The repository is configured with:
 
 - an `npm` environment that only `main` can deploy to
-- a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the `CI passed` check
+- a `main` ruleset that blocks force pushes and deletion, requires a pull request, and requires the `CI passed` and `CodeRabbit` checks and resolved review conversations
 - a tag ruleset that stops `v*` release tags from being moved or deleted
 
 ## Pull request checks
@@ -115,4 +115,11 @@ CI only runs what a change needs:
 - Dependency review runs only when `package.json` or `pnpm-lock.yaml` change.
 - CodeQL and the API integration tests run only when code changes.
 
-`CI passed` summarises the CI jobs and is the only required check; skipped jobs count as passed.
+Two checks are required before a PR can merge into `main`:
+
+- **`CI passed`** summarises the CI jobs; skipped jobs count as passed.
+- **`CodeRabbit`** is an automated code review of every PR into `main`, re-run on each push. Auto-merge waits for it, and its review comments must be resolved before merging (fix the code, or reply and resolve the thread). Configuration is in [`.coderabbit.yaml`](.coderabbit.yaml). Comment `@coderabbitai review` to re-run it.
+
+CodeRabbit skips `pnpm-lock.yaml` and `CHANGELOG.md`, which are generated; a PR that changes only those files gets a skipped review, which counts as passed.
+
+Pushes to branches other than `main` don't trigger CI. Pull requests into other branches still run CI, but only the `main` ruleset requires `CI passed` and `CodeRabbit`, and CodeRabbit reviews only PRs into `main`.

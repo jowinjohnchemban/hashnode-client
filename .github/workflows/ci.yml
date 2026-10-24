@@ -2,7 +2,8 @@ name: CI
 
 # On pull requests, only checks that a change needs are run: build and test
 # jobs are skipped when only docs change, and dependency review runs only when
-# dependencies change. "CI passed" is the single required check.
+# dependencies change. "CI passed" summarises the CI jobs; the main ruleset also
+# requires the CodeRabbit review.
 
 on:
   push:
