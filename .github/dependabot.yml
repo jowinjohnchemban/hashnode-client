@@ -17,6 +17,10 @@ updates:
       # Keep types at the oldest supported Node.js major (see engines.node).
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # v10 needs conventional-changelog-writer 9, but semantic-release's notes
+      # generator uses writer 8; v10 broke the 2.0.1 release notes.
+      - dependency-name: conventional-changelog-conventionalcommits
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
