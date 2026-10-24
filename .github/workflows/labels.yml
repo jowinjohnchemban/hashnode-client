@@ -1,0 +1,73 @@
+name: Labels
+
+# Labels pull requests automatically:
+# - area labels from the changed files (.github/labeler.yml), kept in sync
+# - a type label from the Conventional Commit title, plus "breaking change"
+#   for `!` or a BREAKING CHANGE footer and "dependencies" for the deps scope
+#
+# pull_request_target lets this label pull requests from forks. It runs the
+# workflow from main and never checks out or runs code from the pull request.
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: labels-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/labeler@v7
+        with:
+          sync-labels: true
+
+      - name: Label by title
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const TYPES = {
+              feat: 'enhancement',
+              fix: 'bug',
+              docs: 'documentation',
+              perf: 'performance',
+              refactor: 'refactor',
+              test: 'tests',
+              ci: 'ci',
+              build: 'build',
+              chore: 'chore',
+              style: 'chore',
+              revert: 'chore',
+            };
+            const MANAGED = new Set([...Object.values(TYPES), 'breaking change']);
+
+            const pr = context.payload.pull_request;
+            const match = /^(\w+)(?:\(([^)]*)\))?(!)?: /.exec(pr.title);
+            const wanted = new Set();
+            if (match) {
+              const [, type, scope = '', bang] = match;
+              const label = TYPES[type.toLowerCase()];
+              if (label) wanted.add(label);
+              if (bang || /^BREAKING[ -]CHANGE: /m.test(pr.body ?? '')) wanted.add('breaking change');
+              if (scope.split(',').some((s) => s.trim() === 'deps')) wanted.add('dependencies');
+            }
+
+            const current = pr.labels.map((l) => l.name);
+            const remove = current.filter((name) => MANAGED.has(name) && !wanted.has(name));
+            const add = [...wanted].filter((name) => !current.includes(name));
+            const issue = { ...context.repo, issue_number: pr.number };
+
+            for (const name of remove) {
+              await github.rest.issues.removeLabel({ ...issue, name }).catch((error) => {
+                if (error.status !== 404) throw error;
+              });
+            }
+            if (add.length > 0) await github.rest.issues.addLabels({ ...issue, labels: add });
+            core.info(`Type labels: ${[...wanted].join(', ') || 'none'} (added ${add.length}, removed ${remove.length})`);
