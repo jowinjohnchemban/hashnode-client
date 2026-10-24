@@ -10,8 +10,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
-const files = execFileSync('git', ['ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' })
-  .split('\n')
+// -z gives raw, NUL-separated paths; without it git quotes unusual names,
+// which would then be skipped instead of scanned.
+const files = execFileSync('git', ['ls-files', '-z', '-co', '--exclude-standard'], {
+  encoding: 'utf8',
+})
+  .split('\0')
   .filter((file) => file && existsSync(file))
   .filter((file) => !/\.(png|jpe?g|gif|ico|woff2?)$/i.test(file));
 
@@ -42,7 +46,7 @@ const checks = [
       // and bidirectional formatting characters can hide code from reviewers.
       const invisible =
         // eslint-disable-next-line no-control-regex -- matching control characters is the point
-        /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/;
+        /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u061C\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF\u{E0000}-\u{E007F}]/u;
       return grep(files, invisible).map((hit) => {
         const [location] = hit.split(': ');
         const line = read(location.split(':')[0]).split('\n')[Number(location.split(':')[1]) - 1];
@@ -111,7 +115,7 @@ const checks = [
     run() {
       return grep(
         workflows,
-        /uses:\s*(?!actions\/|github\/|\.\/)[\w.-]+\/[\w./-]+@(?![0-9a-f]{40}\b)/,
+        /uses:\s*["']?(?!actions\/|github\/|\.\/)[\w.-]+\/[\w./-]+@(?![0-9a-f]{40}\b)/,
       );
     },
   },
@@ -132,7 +136,7 @@ const checks = [
       // or passed through env, never expanded directly into a script.
       return grep(
         workflows,
-        /\$\{\{\s*github\.(head_ref|event\.(pull_request|issue|comment|review|head_commit|commits|pages)[\w.[\]*]*\.(title|body|ref|label|message|name|email|default_branch))\b/,
+        /\$\{\{\s*github\.(head_ref|event\.(pull_request|issue|comment|review|head_commit|commits|pages)[\w.[\]*]*\.(title|body|ref|label|message|name|email|default_branch|description))\b/,
       );
     },
   },

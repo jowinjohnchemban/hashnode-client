@@ -363,3 +363,71 @@ describe('stdio limits', () => {
     ).rejects.toThrow(name);
   });
 });
+
+describe('review hardening', () => {
+  it('strips Unicode tag characters and U+061C but keeps emoji variation selectors', () => {
+    const smuggled = `ok\u{E0041}\u{E0042}\u{E007F}\u061C!`;
+    expect(sanitizeOutput(smuggled)).toBe('ok!');
+    expect(sanitizeOutput('heart \u2764\uFE0F')).toBe('heart \u2764\uFE0F');
+  });
+
+  it('rejects unknown arguments as a tool error before calling Hashnode', async () => {
+    const { fetch, mock } = routedFetch({});
+    const result = await call(createMcpServer({ host: HOST, fetch }), 'get_post', {
+      slug: 'hello',
+      sql: 'drop table',
+    });
+    expect(result).toMatchObject({ isError: true, content: [{ text: 'Unknown argument: sql' }] });
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it('redacts free-text arguments in audit events', async () => {
+    const events: McpToolCallEvent[] = [];
+    const mcp = createMcpServer({
+      host: HOST,
+      publicationId: 'pub',
+      fetch: routedFetch({}).fetch,
+      onToolCall: (event) => events.push(event),
+    });
+    await call(mcp, 'search_posts', { query: 'my password is hunter2', first: 3 });
+    expect(events[0]!.arguments).toEqual({ query: '[redacted: 22 characters]', first: 3 });
+    expect(JSON.stringify(events)).not.toContain('hunter2');
+  });
+
+  it('stops reading stdin while the queue is full', async () => {
+    let started = 0;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const server: McpServer = {
+      tools: [],
+      handleMessage: async (message) => {
+        started++;
+        await gate;
+        return { jsonrpc: '2.0', id: (message as { id: number }).id, result: {} };
+      },
+    };
+    const input = new PassThrough();
+    const output = new PassThrough();
+    const lines: string[] = [];
+    output.on('data', (chunk: Buffer) => lines.push(...chunk.toString().trim().split('\n')));
+    const ping = (id: number) => `{"jsonrpc":"2.0","id":${id},"method":"ping"}\n`;
+    const batch = (from: number) => Array.from({ length: 10 }, (_v, i) => ping(from + i)).join('');
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+    const done = serveStdio(server, { input, output, maxConcurrentRequests: 2 });
+    input.write(batch(1));
+    await tick();
+    // Two requests run, two wait in the queue, and the reader is paused, so
+    // later input stays unread in the stream instead of piling up in memory.
+    expect(started).toBe(2);
+    input.write(batch(11));
+    await tick();
+    expect(input.readableLength).toBeGreaterThan(0);
+    expect(started).toBe(2);
+
+    release();
+    input.end();
+    await done;
+    expect(lines.filter(Boolean)).toHaveLength(20);
+  });
+});

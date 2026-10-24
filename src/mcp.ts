@@ -231,12 +231,14 @@ function contentFormat(args: Args): ContentFormat {
 // ---------------------------------------------------------------------------
 
 // Control characters (except tab, line feed and carriage return), zero-width
-// characters and bidirectional formatting characters can hide text from people
-// reviewing a conversation, so they are removed from all output. This only
+// characters, bidirectional formatting characters (including U+061C) and Unicode
+// tag characters (U+E0000 to U+E007F, used for "ASCII smuggling") can hide text
+// from people reviewing a conversation, so they are removed from all output.
+// Variation selectors are kept because emoji need them. This only
 // supplements the untrusted-content notice; it does not make content safe.
 const INVISIBLE_CHARACTERS =
   // eslint-disable-next-line no-control-regex -- matching control characters is the point
-  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF\u{E0000}-\u{E007F}]/gu;
 
 /** Removes invisible and control characters from every string in a JSON value. */
 export function sanitizeOutput<T>(value: T): T {
@@ -521,6 +523,23 @@ function defineTools(): ToolDefinition[] {
   ];
 }
 
+/** Argument names whose values are free text and may contain anything a user typed. */
+const FREE_TEXT_ARGUMENTS = new Set(['query']);
+
+/**
+ * Copies tool arguments for audit logs, replacing free-text values with their
+ * length so the logs can't capture secrets someone pasted into a search.
+ */
+function redactArguments(args: Args): Args {
+  return Object.fromEntries(
+    Object.entries(args).map(([key, value]) =>
+      FREE_TEXT_ARGUMENTS.has(key) && typeof value === 'string'
+        ? [key, `[redacted: ${value.length} characters]`]
+        : [key, value],
+    ),
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -618,6 +637,11 @@ export function createMcpServer(options: McpServerOptions = {}): McpServer {
     const started = Date.now();
     let result: McpToolResult;
     try {
+      const allowed = Object.keys(tool.inputSchema.properties as Record<string, unknown>);
+      const unknown = Object.keys(args).filter((key) => !allowed.includes(key));
+      if (unknown.length > 0) {
+        throw new ToolInputError(`Unknown argument: ${unknown.join(', ')}`);
+      }
       const output = sanitizeOutput(
         await tool.run({ client: getClient(), maxContentLength }, args),
       );
@@ -637,7 +661,7 @@ export function createMcpServer(options: McpServerOptions = {}): McpServer {
     report({
       time: new Date(started).toISOString(),
       tool: tool.name,
-      arguments: args,
+      arguments: redactArguments(args),
       durationMs: Date.now() - started,
       isError: result.isError === true,
     });
@@ -805,6 +829,7 @@ export async function serveStdio(server: McpServer, options: StdioOptions = {}):
   const pump = () => {
     while (running.size < maxConcurrent && queue.length > 0) {
       const line = queue.shift() ?? '';
+      notifySpace();
       const task: Promise<void> = handleLine(line).finally(() => {
         running.delete(task);
         pump();
@@ -813,9 +838,19 @@ export async function serveStdio(server: McpServer, options: StdioOptions = {}):
     }
   };
 
-  const accept = (line: string) => {
+  // Readers waiting for queue space. The queue holds at most maxConcurrent
+  // lines, so memory stays bounded however fast the peer writes.
+  const spaceWaiters: (() => void)[] = [];
+  const notifySpace = () => {
+    while (queue.length < maxConcurrent && spaceWaiters.length > 0) spaceWaiters.shift()?.();
+  };
+
+  const accept = async (line: string) => {
     const trimmed = line.endsWith('\r') ? line.slice(0, -1) : line;
     if (!trimmed.trim()) return;
+    while (queue.length >= maxConcurrent) {
+      await new Promise<void>((resolve) => spaceWaiters.push(resolve));
+    }
     queue.push(trimmed);
     pump();
   };
@@ -846,13 +881,13 @@ export async function serveStdio(server: McpServer, options: StdioOptions = {}):
         }
       }
       if (newline !== -1) {
-        if (!discarding) accept(buffer);
+        if (!discarding) await accept(buffer);
         buffer = '';
         discarding = false;
       }
     }
   }
-  if (!discarding) accept(buffer);
+  if (!discarding) await accept(buffer);
 
   while (running.size > 0 || queue.length > 0) await Promise.all([...running]);
 }
