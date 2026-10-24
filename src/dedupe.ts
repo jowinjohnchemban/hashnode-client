@@ -2,11 +2,21 @@
  * In-flight request de-duplication: identical requests made while one is
  * already running share its result instead of sending another API request.
  *
+ * Safety properties:
+ * - Requests share only when they would send the same HTTP request. The key is
+ *   built from the exact query, variables and cache options, and sharing is
+ *   per client, whose endpoint, token and headers are fixed.
+ * - Every caller gets its own deep copy of the result and its own error
+ *   object, so no caller can change what another receives.
+ * - Only query operations are shared, never mutations or subscriptions.
+ * - Entries are removed as soon as a request settles or every caller aborts,
+ *   so nothing is kept after the request and nothing leaks.
+ *
  * @module dedupe
  * @internal
  */
 
-import { HashnodeError } from './errors';
+import { HashnodeError, isHashnodeError } from './errors';
 
 interface Entry {
   promise: Promise<unknown>;
@@ -58,7 +68,12 @@ export class InFlightRequests {
 
     const shared = entry;
     shared.waiters++;
-    const result = shared.promise.then((data) => structuredClone(data) as T);
+    const result = shared.promise.then(
+      (data) => structuredClone(data) as T,
+      (error: unknown) => {
+        throw copyError(error);
+      },
+    );
     if (!signal) return result;
 
     return withAbort(result, signal, () => {
@@ -74,6 +89,19 @@ export class InFlightRequests {
   #release(key: string, entry: Entry): void {
     if (this.#pending.get(key) === entry) this.#pending.delete(key);
   }
+}
+
+/** Gives each caller its own error object, so one caller can't alter another's. */
+function copyError(error: unknown): unknown {
+  if (!isHashnodeError(error)) return error;
+  const copy = new HashnodeError(error.message, {
+    code: error.code,
+    status: error.status,
+    errors: structuredClone(error.errors),
+    cause: error.cause,
+  });
+  copy.stack = error.stack;
+  return copy;
 }
 
 function abortedError(signal: AbortSignal): HashnodeError {
@@ -100,10 +128,13 @@ function withAbort<T>(promise: Promise<T>, signal: AbortSignal, onAbort: () => v
 }
 
 /**
- * True for GraphQL query operations, which are safe to share. Mutations and
- * subscriptions are never de-duplicated.
+ * True for GraphQL documents that only read data and are safe to share. It is
+ * deliberately conservative: a document that mentions `mutation` or
+ * `subscription` anywhere is never shared, even if that word is just a field
+ * name.
  */
 export function isQueryOperation(document: string): boolean {
+  if (/\b(mutation|subscription)\b/i.test(document)) return false;
   let text = document.trimStart();
   // Skip leading comments.
   while (text.startsWith('#')) {

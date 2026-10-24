@@ -55,9 +55,14 @@ export interface HashnodeClientOptions extends FetchCacheOptions {
   /** Custom `fetch` implementation. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
   /**
-   * Share one API request between identical queries made at the same time, so
-   * 100 concurrent calls for the same data send a single request. Each caller
-   * gets its own copy of the result. Defaults to `true`.
+   * Share one API request between identical queries made at the same time.
+   * Any number of concurrent calls for the same data send a single request,
+   * and each caller gets its own copy of the result.
+   *
+   * Defaults to `true`, or to `false` when a custom `fetch` is given: a custom
+   * fetch might add per-user credentials, and sharing would then expose one
+   * user's response to another. Set it to `true` if your fetch sends the same
+   * credentials for every request.
    */
   dedupe?: boolean;
 }
@@ -129,7 +134,9 @@ export function resolveConfig(options: HashnodeClientOptions = {}): ResolvedConf
     timeoutMs: options.timeoutMs ?? parseTimeout(env('HASHNODE_TIMEOUT_MS')) ?? DEFAULT_TIMEOUT_MS,
     headers: options.headers ?? {},
     fetch: fetchImpl,
-    dedupe: options.dedupe ?? true,
+    // A custom fetch may add per-user credentials, so sharing responses between
+    // callers is only on by default with the built-in fetch.
+    dedupe: options.dedupe ?? options.fetch === undefined,
     cache: options.cache,
     next: options.next,
   };
