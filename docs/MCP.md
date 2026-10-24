@@ -12,7 +12,7 @@ Every client starts the same command:
 npx -y @jowinjohnchemban/hashnode-client --host blog.example.com
 ```
 
-`--host` can be replaced by the `HASHNODE_PUBLICATION_HOST` environment variable. The other `HASHNODE_*` variables (see [Getting started](GETTING_STARTED.md#configure)) also apply.
+`--host` can be replaced by the `HASHNODE_PUBLICATION_HOST` environment variable. The other `HASHNODE_*` variables (see [Getting started](GETTING_STARTED.md#configure)) also apply, except `HASHNODE_ACCESS_TOKEN`, which the server never uses. For production use, pin a version: see [Security](#security).
 
 ### Claude Desktop
 
@@ -84,7 +84,7 @@ All tools are read-only. List results return summaries plus a `nextCursor`; pass
 | `get_static_page`   | `slug`, `format`                     | One static page with its content |
 | `list_comments`     | `post_id`, `first`, `after`          | Comments on a post               |
 
-`format` is `markdown` (default), `html` or `text`. Results come back both as JSON text and as `structuredContent`.
+`format` is `markdown` (default), `html` or `text`. Each result comes back as JSON text, followed by a notice that the content is untrusted, and as `structuredContent`. Content longer than the limits in [Security](#security) is truncated and marked with `contentTruncated: true`.
 
 Problems, such as a missing post, bad arguments or Hashnode's `FORBIDDEN` for non-Pro publications, are returned as tool errors (`isError: true`) with a readable message, so the assistant can see and explain them.
 
@@ -102,21 +102,52 @@ The `@jowinjohnchemban/hashnode-client/mcp` entry point exposes the server for c
 ```ts
 import { createMcpServer, serveStdio } from '@jowinjohnchemban/hashnode-client/mcp';
 
-const server = createMcpServer({ host: 'blog.example.com' }); // any HashnodeClient options
-await serveStdio(server);
+const server = createMcpServer({
+  host: 'blog.example.com', // and any other HashnodeClient option except token
+  maxContentLength: 50_000, // longer post and page content is truncated (default 50,000)
+  onToolCall: (event) => console.error(JSON.stringify(event)), // audit log
+});
+await serveStdio(server, { maxMessageLength: 1_000_000, maxConcurrentRequests: 4 });
 
 // Or handle JSON-RPC messages yourself, for example from another transport:
 const response = await server.handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
 ```
 
-Pass `client` to reuse an existing `HashnodeClient`, including its caching and timeout settings.
+Pass `client` to reuse an existing `HashnodeClient`, including its caching and timeout settings. A client you pass in is used as it is, so don't give it a token.
 
 ## Security
 
-- The server is read-only. It has no tools that create, change or delete anything.
-- It doesn't need an access token, and drafts aren't exposed. Don't set `HASHNODE_ACCESS_TOKEN` for it.
-- It talks only to the Hashnode API and only over stdio; it doesn't open network ports.
-- Tool output contains your published content. Content from comments is written by other people, so treat it as untrusted input to the assistant.
+The server follows the server-author recommendations of the [OWASP MCP Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/MCP_Security_Cheat_Sheet.html). Each item below is covered by `test/unit/mcp-security.test.ts`.
+
+| Cheat sheet                  | What the server does                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| §1 Least privilege           | Only read-only tools. It never sends an access token, even if `HASHNODE_ACCESS_TOKEN` is set, and drafts aren't exposed.                                                                                                                                                                                                                                  |
+| §2 Tool definition integrity | Strict input schemas: `additionalProperties: false`, and every string has a `maxLength` and, where possible, a `pattern`. Descriptions only mention this server's own tools. A snapshot test fails on any change to a tool definition, so changes are reviewed and released deliberately.                                                                 |
+| §3 Isolation                 | Runs over stdio and opens no ports. It reads no files, starts no processes and only contacts the configured Hashnode endpoint. See [Sandboxing](#sandboxing).                                                                                                                                                                                             |
+| §5 Input validation          | The server enforces every schema rule itself, because clients may not, including rejecting unknown arguments. Invalid input is rejected before any request reaches Hashnode. It runs no shell commands, opens no file paths and never fetches URLs taken from the model.                                                                                  |
+| §5, §12 Untrusted output     | Every result says it is untrusted data from blog authors and readers, and the server instructions repeat this. Control, zero-width, text-direction and Unicode tag characters ("ASCII smuggling") are removed. Post and page content is cut to `maxContentLength`, and comments to 5,000 characters. Tools return selected fields, not raw API responses. |
+| Availability                 | Upstream requests time out (`HASHNODE_TIMEOUT_MS`, default 15 s). Over stdio, messages over 1,000,000 characters are rejected without being buffered, at most 4 requests run at once, and the server stops reading while its queue is full.                                                                                                               |
+| §9 Supply chain              | No runtime dependencies. Releases are built by GitHub Actions and published with npm provenance.                                                                                                                                                                                                                                                          |
+| §10 Logging                  | The `hashnode-mcp` command writes one JSON line per tool call to stderr: time, tool, arguments, duration and whether it failed. Free-text arguments (`query`) are replaced by their length, so logs never capture what was typed. MCP hosts keep stderr as the server log. `--quiet` turns this off.                                                      |
+
+Some protections are up to you and your MCP host:
+
+- **Pin the version you reviewed**, for example `npx -y @jowinjohnchemban/hashnode-client@<version>`, instead of always running the latest release. To check that an installed copy was built from this repository, run `npm audit signatures` in the project where it's installed; it should report a verified attestation.
+- **Review the tools** when you first connect, and again if the tool list changes after an upgrade. The release notes list every change.
+- **Keep approval prompts on** in your MCP host, especially when other servers that can take actions are connected. Content from this server, such as comments, could try to persuade the assistant to misuse those other tools.
+- **Treat reader content as untrusted**, even when it appears on your own blog.
+
+### Sandboxing
+
+The server needs no file writes, child processes or other permissions, so it runs under [Node.js's permission model](https://nodejs.org/api/permissions.html). This needs Node.js 22.13 or later; earlier versions call the flag `--experimental-permission`. Install the package, then start it with read access to its own folder only:
+
+```sh
+npm install --global @jowinjohnchemban/hashnode-client
+PKG="$(npm root --global)/@jowinjohnchemban/hashnode-client"
+node --permission --allow-fs-read="$PKG" "$PKG/dist/cli.js" --host blog.example.com
+```
+
+Use the same `node` command and arguments in your MCP host's configuration, with the folder path written out. In this mode, file writes and child processes are denied. The permission model doesn't restrict network access in Node.js 22; use a container or firewall rules for that.
 
 ## Developing this repository
 

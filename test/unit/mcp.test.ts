@@ -344,7 +344,7 @@ describe('tools', () => {
     ['search_posts', { query: '  ' }, 'non-empty string'],
     ['list_posts', { first: 0 }, 'integer from 1 to 50'],
     ['list_posts', { first: 51 }, 'integer from 1 to 50'],
-    ['list_posts', { tags: [''] }, 'array of non-empty strings'],
+    ['list_posts', { tags: [''] }, '`tags[0]` must be a non-empty string'],
     ['get_series', { slug: 'missing' }, 'Series not found'],
     ['get_static_page', { slug: 'missing' }, 'Static page not found'],
   ])('%s %j reports a tool error', async (name, args, message) => {
