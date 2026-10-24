@@ -1,82 +1,94 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
-  "version": "2.0.0",
-  "description": "Standalone, self-contained Hashnode GraphQL API client for Next.js and Node.js with full feature support including webhooks, search, series, and static pages",
-  "main": "index.js",
-  "module": "index.js",
-  "types": "index.d.ts",
-  "source": "index.ts",
+  "version": "1.0.13",
+  "description": "Typed, zero-dependency Hashnode GraphQL API client for Node.js, Next.js and edge runtimes, with webhook verification.",
   "keywords": [
     "hashnode",
     "graphql",
     "blog",
-    "api",
-    "client",
+    "api-client",
+    "headless-cms",
     "nextjs",
+    "webhooks",
     "typescript"
   ],
-  "author": "Jowin John Chemban",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jowinjohnchemban/hashnode-client.git",
-    "directory": "src/lib/api/hashnode"
-  },
+  "homepage": "https://github.com/jowinjohnchemban/hashnode-client#readme",
   "bugs": {
     "url": "https://github.com/jowinjohnchemban/hashnode-client/issues"
   },
-  "homepage": "https://github.com/jowinjohnchemban/hashnode-client#readme",
-  "dependencies": {
-    "axios": "^1.13.2"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jowinjohnchemban/hashnode-client.git"
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "scripts": {
-    "build": "tsc",
-    "clean": "del /q *.js *.d.ts *.d.ts.map *.js.map 2>nul || echo Clean complete",
-    "prepublishOnly": "npm run clean && npm run build",
-    "test": "node -e \"const c = require('./index.js'); console.log('✓ Module loads'); console.log('✓ Functions:', Object.keys(c).filter(k => typeof c[k] === 'function').length);\"",
-    "verify": "npm run build && npm run test"
-  },
+  "license": "MIT",
+  "author": "Jowin John Chemban",
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "require": "./index.js",
-      "default": "./index.js",
-      "source": "./index.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
-    "./types": {
-      "types": "./types.d.ts",
-      "import": "./types.js",
-      "require": "./types.js",
-      "default": "./types.js",
-      "source": "./types.ts"
+    "./webhooks": {
+      "import": {
+        "types": "./dist/webhooks.d.ts",
+        "default": "./dist/webhooks.js"
+      },
+      "require": {
+        "types": "./dist/webhooks.d.cts",
+        "default": "./dist/webhooks.cjs"
+      }
     },
-    "./config": {
-      "types": "./config.d.ts",
-      "import": "./config.js",
-      "require": "./config.js",
-      "default": "./config.js",
-      "source": "./config.ts"
-    },
-    "./source/*": "./*.ts"
+    "./package.json": "./package.json"
   },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.cts",
   "files": [
-    "*.ts",
-    "*.js",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js.map",
-    "README.md",
-    "LICENSE",
-    ".env.example",
-    "!tsconfig.json",
-    "!*.test.ts",
-    "!*.spec.ts"
-  ]
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:coverage": "vitest run --project unit --coverage",
+    "lint:package": "publint --strict && attw --pack . --profile node16 && node scripts/verify-package.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm lint:package",
+    "prepack": "pnpm build",
+    "test:integration": "vitest run --project integration"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }

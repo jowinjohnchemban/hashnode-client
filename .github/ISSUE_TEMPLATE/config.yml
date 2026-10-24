@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/jowinjohnchemban/hashnode-client/security/advisories/new
+    about: Report security issues privately, not as public issues.
+  - name: Hashnode API questions
+    url: https://hashnode.com/pro
+    about: API access and plan questions are handled by Hashnode.

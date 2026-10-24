@@ -2,153 +2,81 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  quality:
+    name: Lint, format & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+  test:
+    name: Test (Node ${{ matrix.node }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [18.x, 20.x, 22.x]
-
+        os: [ubuntu-latest]
+        node: [22, 24, 26]
+        include:
+          - os: windows-latest
+            node: 24
+          - os: macos-latest
+            node: 24
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:coverage
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Clean previous build
-        run: npm run clean
-
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Verify build artifacts
-        shell: bash
-        run: |
-          echo "Checking compiled files..."
-          if [ ! -f index.js ]; then
-            echo "❌ index.js not found"
-            exit 1
-          fi
-          if [ ! -f index.d.ts ]; then
-            echo "❌ index.d.ts not found"
-            exit 1
-          fi
-          echo "✓ Build artifacts verified"
-
-      - name: Test module loading
-        shell: bash
-        run: |
-          node -e "const client = require('./index.js'); console.log('✓ Module loads');"
-          node -e "const { getBlogPosts, searchPosts, getSeries } = require('./index.js'); console.log('✓ Named exports work');"
-          node -e "const webhooks = require('./webhooks.js'); console.log('✓ Webhook module loads');"
-
-      - name: Check TypeScript types
-        run: npx tsc --noEmit
-
-      - name: Count exported functions
-        shell: bash
-        run: |
-          FUNC_COUNT=$(node -e "const c = require('./index.js'); console.log(Object.keys(c).filter(k => typeof c[k] === 'function').length);")
-          echo "Exported functions: $FUNC_COUNT"
-          if [ "$FUNC_COUNT" -lt 15 ]; then
-            echo "❌ Expected at least 15 exported functions, got $FUNC_COUNT"
-            exit 1
-          fi
-          echo "✓ Export count verified"
-
-      - name: Lint package.json
-        shell: bash
-        run: |
-          node -e "
-            const pkg = require('./package.json');
-            if (!pkg.name) { console.error('Missing name'); process.exit(1); }
-            if (!pkg.version) { console.error('Missing version'); process.exit(1); }
-            if (!pkg.main) { console.error('Missing main'); process.exit(1); }
-            if (!pkg.types) { console.error('Missing types'); process.exit(1); }
-            console.log('✓ package.json valid');
-          "
-
-      - name: Check for uncommitted changes
-        shell: bash
-        run: |
-          # Ignore copilot-instructions.md as it's dev-only
-          git update-index --assume-unchanged .github/copilot-instructions.md 2>/dev/null || true
-
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "❌ Build generated uncommitted changes:"
-            git status --short
-            git diff
-            exit 1
-          fi
-          echo "✓ No uncommitted changes"
-
-  lint-docs:
+  package:
+    name: Build & validate package
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check markdown links
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@v7
         with:
-          use-quiet-mode: "yes"
-          config-file: ".github/markdown-link-check-config.json"
-          folder-path: "docs/"
-
-      - name: Check README exists
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm lint:package
+      - name: Smoke-test the packed tarball
         run: |
-          if [ ! -f README.md ]; then
-            echo "❌ README.md not found"
-            exit 1
-          fi
-          echo "✓ README.md exists"
-
-      - name: Verify documentation structure
-        run: |
-          for file in docs/API_REFERENCE.md docs/DEVELOPMENT.md docs/MIGRATION.md docs/FEATURES.md docs/README.md; do
-            if [ ! -f "$file" ]; then
-              echo "❌ $file not found"
-              exit 1
-            fi
-          done
-          echo "✓ All documentation files exist"
-
-  security:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-
-      - name: Check for hardcoded secrets
-        run: |
-          if grep -r "HASHNODE_ACCESS_TOKEN=" --include="*.ts" --include="*.js" --exclude-dir=node_modules .; then
-            echo "❌ Found hardcoded tokens"
-            exit 1
-          fi
-          echo "✓ No hardcoded secrets found"
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          npm init -y > /dev/null
+          npm install ./*.tgz
+          node -e "const c = require('@jowinjohnchemban/hashnode-client'); if (typeof c.HashnodeClient !== 'function') process.exit(1)"
+          node --input-type=module -e "import { createWebhookHandler } from '@jowinjohnchemban/hashnode-client/webhooks'; if (typeof createWebhookHandler !== 'function') process.exit(1)"
