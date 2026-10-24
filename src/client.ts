@@ -12,6 +12,7 @@ import {
   type HashnodeClientOptions,
   type ResolvedConfig,
 } from './config';
+import { InFlightRequests, isQueryOperation } from './dedupe';
 import { HashnodeError, isHashnodeError } from './errors';
 import * as Q from './queries';
 import { executeGraphQL, type RequestOptions } from './transport';
@@ -93,6 +94,7 @@ function requireNonEmpty(value: string, name: string): string {
  */
 export class HashnodeClient {
   readonly #config: ResolvedConfig;
+  readonly #inFlight = new InFlightRequests();
   #publicationId: Promise<string> | undefined;
 
   constructor(options: HashnodeClientOptions = {}) {
@@ -110,13 +112,28 @@ export class HashnodeClient {
   /**
    * Runs an arbitrary GraphQL operation against the configured endpoint.
    * Use this for fields the typed methods do not cover.
+   *
+   * Identical queries made at the same time share one API request (see the
+   * `dedupe` option). Mutations are always sent individually.
    */
   request<T>(
     query: string,
     variables: Record<string, unknown> = {},
-    options?: RequestOptions,
+    options: RequestOptions = {},
   ): Promise<T> {
-    return executeGraphQL<T>(this.#config, query, variables, options);
+    if (!this.#config.dedupe || !isQueryOperation(query)) {
+      return executeGraphQL<T>(this.#config, query, variables, options);
+    }
+    const cache = options.cache ?? this.#config.cache;
+    const next = options.next ?? this.#config.next;
+    const key = JSON.stringify([query, variables, cache ?? null, next ?? null]);
+    // Each caller's signal is applied separately; the shared request is only
+    // cancelled once every caller waiting for it has aborted.
+    return this.#inFlight.run(
+      key,
+      (signal) => executeGraphQL<T>(this.#config, query, variables, { cache, next, signal }),
+      options.signal,
+    );
   }
 
   #requireHost(): string {

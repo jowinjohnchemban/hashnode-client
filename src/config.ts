@@ -54,6 +54,12 @@ export interface HashnodeClientOptions extends FetchCacheOptions {
   headers?: Record<string, string>;
   /** Custom `fetch` implementation. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+  /**
+   * Share one API request between identical queries made at the same time, so
+   * 100 concurrent calls for the same data send a single request. Each caller
+   * gets its own copy of the result. Defaults to `true`.
+   */
+  dedupe?: boolean;
 }
 
 /** Fully resolved client configuration. */
@@ -65,6 +71,7 @@ export interface ResolvedConfig extends FetchCacheOptions {
   timeoutMs: number;
   headers: Record<string, string>;
   fetch: typeof fetch;
+  dedupe: boolean;
 }
 
 function env(name: string): string | undefined {
@@ -122,6 +129,7 @@ export function resolveConfig(options: HashnodeClientOptions = {}): ResolvedConf
     timeoutMs: options.timeoutMs ?? parseTimeout(env('HASHNODE_TIMEOUT_MS')) ?? DEFAULT_TIMEOUT_MS,
     headers: options.headers ?? {},
     fetch: fetchImpl,
+    dedupe: options.dedupe ?? true,
     cache: options.cache,
     next: options.next,
   };

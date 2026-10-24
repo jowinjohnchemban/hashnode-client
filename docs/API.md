@@ -4,6 +4,7 @@
   - [Options](#options)
   - [Request options](#request-options)
   - [Methods](#methods)
+- [Request de-duplication](#request-de-duplication)
 - [Pagination](#pagination)
 - [Errors](#errors)
 - [Types](#types)
@@ -35,6 +36,7 @@ One client talks to one publication. Create it once and reuse it.
 | `fetch`         | `typeof fetch`             | —                           | `globalThis.fetch`               | Custom fetch, e.g. for tests or proxies.                                                                                                                                               |
 | `cache`         | `RequestCache`-like string | —                           | not set                          | Default `fetch` `cache` option.                                                                                                                                                        |
 | `next`          | `{ revalidate?, tags? }`   | —                           | not set                          | Default Next.js data-cache options.                                                                                                                                                    |
+| `dedupe`        | `boolean`                  | —                           | `true`                           | Share one API request between identical queries made at the same time. See [Request de-duplication](#request-de-duplication).                                                          |
 
 ### Request options
 
@@ -132,6 +134,19 @@ const data = await hashnode.request<{ publication: { followersCount: number } }>
 #### `host` (getter) → `string | undefined`
 
 The configured publication host.
+
+## Request de-duplication
+
+When several identical queries are in flight at once, the client sends one API request and gives every caller the result. For example, 100 concurrent `getPost('hello')` calls make a single request to Hashnode. This applies to every method and to `request()`.
+
+- **Identical** means the same query, variables and `cache`/`next` options. Anything else is sent separately.
+- Each caller gets **its own copy** of the result, so changing one doesn't affect the others.
+- Only requests that are **in flight** are shared. Once a request finishes, the next call sends a new one; for longer caching, use `cache` or `next`.
+- **Aborting** a caller's `signal` rejects only that caller with `ABORTED`. The API request is cancelled once every caller waiting for it has aborted.
+- **Failures** are shared too, and the next call retries.
+- **Mutations** are never shared.
+
+Set `dedupe: false` to send every call separately.
 
 ## Pagination
 
