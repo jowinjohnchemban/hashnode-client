@@ -76,10 +76,14 @@ The project uses [Conventional Commits](https://www.conventionalcommits.org/). P
 
 ## Releases
 
-Publishing to npm is automated with [release-please](https://github.com/googleapis/release-please):
+Releases are fully automatic. Merging a `feat:` or `fix:` PR to `main` publishes a new version to npm, with no manual steps:
 
-1. Every merge to `main` opens or updates a release PR with the next version and `CHANGELOG.md` entries, based on the commit messages.
-2. Merging that PR tags the version and creates a GitHub release. The workflow then runs all checks and the integration tests, verifies the package contents and publishes to npm with provenance.
+1. **Release** workflow: [release-please](https://github.com/googleapis/release-please) opens or updates a release PR with the next version and `CHANGELOG.md` entries, based on the commit messages.
+2. **CI** runs on the release PR.
+3. **Auto-release** workflow: when CI passes, it waits for every required check, squash-merges the release PR and starts the **Release** workflow.
+4. **Release** workflow: release-please tags the version and creates a GitHub release. The publish job then runs all checks and the integration tests, verifies the package contents and publishes to npm with provenance.
+
+If any check fails, nothing is merged or published. Fix the problem on `main`, and the release PR is updated and retried. To publish by hand instead, disable the Auto-release workflow and merge release PRs yourself; then run **Release** from the Actions tab if it didn't start.
 
 Only `dist/`, `README.md`, `LICENSE` and `package.json` are published. `scripts/verify-package.mjs` fails the release if anything else ends up in the tarball.
 
@@ -103,4 +107,4 @@ The repository is configured with:
 - **Allow GitHub Actions to create and approve pull requests**, so release-please can open release PRs
 - a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the CI checks to pass
 
-Release PRs are opened with `GITHUB_TOKEN`, so CI doesn't run on them. Repository admins can bypass the required checks to merge them, or you can give release-please a PAT through the action's `token` input so CI runs.
+Release PRs are merged by the Auto-release workflow, never by pushing to `main` directly: the branch is protected, so command-line merges are rejected.
