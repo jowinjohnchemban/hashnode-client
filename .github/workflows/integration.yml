@@ -1,0 +1,34 @@
+name: API integration
+
+# Runs the client against the live Hashnode API to catch schema drift and
+# endpoint changes. The contract test needs no credentials. The live test runs
+# when the repository variable HASHNODE_PUBLICATION_HOST names a Pro publication.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/**', 'test/integration/**']
+  pull_request:
+    paths: ['src/**', 'test/integration/**']
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      HASHNODE_PUBLICATION_HOST: ${{ vars.HASHNODE_PUBLICATION_HOST }}
+      HASHNODE_ACCESS_TOKEN: ${{ secrets.HASHNODE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration
