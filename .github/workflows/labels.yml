@@ -46,9 +46,11 @@ jobs:
               style: 'chore',
               revert: 'chore',
             };
-            const MANAGED = new Set([...Object.values(TYPES), 'breaking change']);
-
             const pr = context.payload.pull_request;
+            const MANAGED = new Set([...Object.values(TYPES), 'breaking change']);
+            // Dependabot sets its own dependencies label; manage it for everyone else.
+            if (pr.user.login !== 'dependabot[bot]') MANAGED.add('dependencies');
+
             const match = /^(\w+)(?:\(([^)]*)\))?(!)?: /.exec(pr.title);
             const wanted = new Set();
             if (match) {
