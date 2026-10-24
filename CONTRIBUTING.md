@@ -76,14 +76,14 @@ The project uses [Conventional Commits](https://www.conventionalcommits.org/). P
 
 ## Releases
 
-Releases are fully automatic. Merging a `feat:` or `fix:` PR to `main` publishes a new version to npm, with no manual steps:
+Releases are created only from `main`, automatically, by [semantic-release](https://semantic-release.gitbook.io/). There are no release PRs and no manual steps:
 
-1. **Release** workflow: [release-please](https://github.com/googleapis/release-please) opens or updates a release PR with the next version and `CHANGELOG.md` entries, based on the commit messages.
-2. **CI** runs on the release PR.
-3. **Auto-release** workflow: when CI passes, it waits for every required check, squash-merges the release PR and starts the **Release** workflow.
-4. **Release** workflow: release-please tags the version and creates a GitHub release. The publish job then runs all checks and the integration tests, verifies the package contents and publishes to npm with provenance.
+1. A PR is squash-merged into `main` once the `CI passed` check succeeds.
+2. The **Release** workflow runs on the push to `main` and re-runs `pnpm check` and the integration tests.
+3. semantic-release reads the commit messages since the last `vX.Y.Z` tag. `fix:` releases a patch, `feat:` a minor, and `feat!:` or a `BREAKING CHANGE:` footer a major version. Other types don't release.
+4. If a release is due, it publishes to npm with provenance, tags `vX.Y.Z` and creates a GitHub release with generated notes.
 
-If any check fails, nothing is merged or published. Fix the problem on `main`, and the release PR is updated and retried. To publish by hand instead, disable the Auto-release workflow and merge release PRs yourself; then run **Release** from the Actions tab if it didn't start.
+If any step fails, nothing is published. The `version` in `package.json` stays `0.0.0-development`; the published version comes from the tags. Release notes are on [GitHub Releases](https://github.com/jowinjohnchemban/hashnode-client/releases).
 
 Only `dist/`, `README.md`, `LICENSE` and `package.json` are published. `scripts/verify-package.mjs` fails the release if anything else ends up in the tarball.
 
@@ -99,12 +99,18 @@ npx npm@latest trust github @jowinjohnchemban/hashnode-client \
 
 You can also do this on npmjs.com under **Package → Settings → Trusted publishing**. Afterwards, set **Publishing access** to "Require two-factor authentication and disallow tokens" so the package can only be published from the workflow.
 
-If trusted publishing isn't an option, add an npm granular access token as the `NPM_TOKEN` secret of the `npm` environment instead (`gh secret set NPM_TOKEN --env npm`).
-
 The repository is configured with:
 
 - an `npm` environment that only `main` can deploy to
-- **Allow GitHub Actions to create and approve pull requests**, so release-please can open release PRs
-- a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the CI checks to pass
+- a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the `CI passed` check
+- a tag ruleset that stops `v*` release tags from being moved or deleted
 
-Release PRs are merged by the Auto-release workflow, never by pushing to `main` directly: the branch is protected, so command-line merges are rejected.
+## Pull request checks
+
+CI only runs what a change needs:
+
+- Docs-only PRs skip the build and test jobs.
+- Dependency review runs only when `package.json` or `pnpm-lock.yaml` change.
+- CodeQL and the API integration tests run only when code changes.
+
+`CI passed` summarises the CI jobs and is the only required check; skipped jobs count as passed.

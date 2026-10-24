@@ -1,5 +1,9 @@
 name: CI
 
+# On pull requests, only checks that a change needs are run: build and test
+# jobs are skipped when only docs change, and dependency review runs only when
+# dependencies change. "CI passed" is the single required check.
+
 on:
   push:
     branches: [main]
@@ -14,8 +18,39 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      deps: ${{ steps.filter.outputs.deps }}
+    steps:
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PR" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "deps=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh pr diff "$PR" --name-only)
+          echo "$files"
+          docs='^(docs/|examples/README|LICENSE$|.*\.md$|\.github/ISSUE_TEMPLATE/|\.github/pull_request_template\.md$)'
+          if echo "$files" | grep -qvE "$docs"; then code=true; else code=false; fi
+          if echo "$files" | grep -qE '^(package\.json|pnpm-lock\.yaml)$'; then deps=true; else deps=false; fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "deps=$deps" >> "$GITHUB_OUTPUT"
+
   quality:
     name: Lint, format & typecheck
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,6 +66,8 @@ jobs:
 
   test:
     name: Test (Node ${{ matrix.node }}, ${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -51,16 +88,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:coverage
-      - name: Upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 14
 
   package:
     name: Build & validate package
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -80,3 +112,29 @@ jobs:
           npm install ./*.tgz
           node -e "const c = require('@jowinjohnchemban/hashnode-client'); if (typeof c.HashnodeClient !== 'function') process.exit(1)"
           node --input-type=module -e "import { createWebhookHandler } from '@jowinjohnchemban/hashnode-client/webhooks'; if (typeof createWebhookHandler !== 'function') process.exit(1)"
+
+  dependency-review:
+    name: Dependency review
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.deps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: moderate
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [changes, quality, test, package, dependency-review]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) exit 1 ;;
+          esac

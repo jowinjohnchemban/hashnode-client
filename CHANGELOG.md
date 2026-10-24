@@ -1,5 +1,7 @@
 # Changelog
 
+Release notes for versions after 2.0.0 are published on [GitHub Releases](https://github.com/jowinjohnchemban/hashnode-client/releases).
+
 ## [2.0.0](https://github.com/jowinjohnchemban/hashnode-client/compare/v1.0.13...v2.0.0) (2026-10-24)
 
 

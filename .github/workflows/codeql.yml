@@ -5,6 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    paths:
+      [
+        'src/**',
+        'test/**',
+        'examples/**',
+        'scripts/**',
+        '.github/workflows/**',
+        '*.config.ts',
+        'eslint.config.js',
+      ]
   schedule:
     - cron: '27 4 * * 1'
 
