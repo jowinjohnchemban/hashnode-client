@@ -15,8 +15,10 @@ coverage/
 # Logs
 *.log
 
-# Editors and OS
-.vscode/
+# Editors and OS (shared VS Code settings are committed)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 .DS_Store
 Thumbs.db

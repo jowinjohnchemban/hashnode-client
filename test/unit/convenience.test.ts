@@ -48,6 +48,71 @@ describe('convenience functions', () => {
     );
   });
 
+  it('return data from every function', async () => {
+    vi.stubEnv('HASHNODE_ACCESS_TOKEN', 'token');
+    const item = { id: '1' };
+    const responses: Record<string, unknown> = {
+      Publication: { publication: { id: 'pub', title: 'Blog' } },
+      PostBySlug: { publication: { post: item } },
+      SearchPosts: { searchPostsOfPublication: connection([item]) },
+      SeriesList: { publication: { seriesList: connection([item]) } },
+      Series: { publication: { series: item } },
+      SeriesPosts: { publication: { series: { posts: connection([item]) } } },
+      StaticPages: { publication: { staticPages: connection([item]) } },
+      StaticPage: { publication: { staticPage: item } },
+      PostComments: { post: { comments: connection([item]) } },
+      RecommendedPublications: { publication: { recommendedPublications: [{ node: item }] } },
+      Drafts: { publication: { drafts: connection([item]) } },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init: RequestInit) => {
+        const { query } = JSON.parse(init.body as string) as { query: string };
+        const operation = /query (\w+)/.exec(query)?.[1] ?? '';
+        return Promise.resolve(json({ data: responses[operation] }));
+      }),
+    );
+    const api = await import('../../src');
+
+    await expect(api.getPublication()).resolves.toEqual({ id: 'pub', title: 'Blog' });
+    await expect(api.getBlogPostBySlug('x')).resolves.toEqual(item);
+    await expect(api.searchPosts('graphql', 5)).resolves.toEqual([item]);
+    await expect(api.getSeriesList(5)).resolves.toEqual([item]);
+    await expect(api.getSeries('s')).resolves.toEqual(item);
+    await expect(api.getSeriesPosts('s', 5)).resolves.toEqual([item]);
+    await expect(api.getStaticPages(5)).resolves.toEqual([item]);
+    await expect(api.getStaticPage('about')).resolves.toEqual(item);
+    await expect(api.getPostComments('1', 5)).resolves.toEqual([item]);
+    await expect(api.getRecommendedPublications()).resolves.toEqual([item]);
+    await expect(api.getDrafts(5)).resolves.toEqual([item]);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('fall back on errors from every function', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('offline'))),
+    );
+    const api = await import('../../src');
+
+    await expect(api.searchPosts('graphql')).resolves.toEqual([]);
+    await expect(api.getSeries('s')).resolves.toBeNull();
+    await expect(api.getSeriesPosts('s')).resolves.toEqual([]);
+    await expect(api.getStaticPage('about')).resolves.toBeNull();
+    await expect(api.getPostComments('1')).resolves.toEqual([]);
+    await expect(api.getDrafts()).resolves.toEqual([]);
+    expect(console.error).toHaveBeenCalledTimes(6);
+  });
+
+  it('log non-HashnodeError failures as-is', async () => {
+    const { getBlogPostBySlug } = await import('../../src');
+    await expect(getBlogPostBySlug('')).resolves.toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      '[hashnode-client] getBlogPostBySlug failed',
+      expect.any(TypeError),
+    );
+  });
+
   it('skip blank search queries', async () => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);

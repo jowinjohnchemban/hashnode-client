@@ -221,8 +221,9 @@ export interface WebhookRequestHandlerOptions {
  * Creates a Fetch API request handler that verifies, parses and dispatches
  * webhooks. Works as a Next.js route handler, in Hono, Bun, Deno and workers.
  *
- * Responds `401` on a bad signature, `400` on a malformed body, `500` if a
- * handler throws, and `200` otherwise.
+ * Responds `405` to methods other than POST, `401` on a bad signature, `400`
+ * on an unreadable or malformed body, `500` if a handler throws or no secret is
+ * configured, and `200` otherwise.
  *
  * @example
  * ```ts
@@ -236,6 +237,13 @@ export function createWebhookHandler(
   options: WebhookRequestHandlerOptions,
 ): (request: Request) => Promise<Response> {
   return async (request) => {
+    if (request.method !== 'POST') {
+      return Response.json(
+        { error: 'Method not allowed' },
+        { status: 405, headers: { allow: 'POST' } },
+      );
+    }
+
     const secret =
       options.secret ??
       (typeof process === 'undefined' ? undefined : process.env.HASHNODE_WEBHOOK_SECRET);
@@ -243,7 +251,12 @@ export function createWebhookHandler(
       return Response.json({ error: 'Webhook secret is not configured' }, { status: 500 });
     }
 
-    const body = await request.text();
+    let body: string;
+    try {
+      body = await request.text();
+    } catch {
+      return Response.json({ error: 'Could not read request body' }, { status: 400 });
+    }
     const valid = await verifyWebhookSignature({
       payload: body,
       signature: request.headers.get(WEBHOOK_SIGNATURE_HEADER),

@@ -79,15 +79,43 @@ function parseTimeout(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+/**
+ * Returns the bare host name Hashnode expects (`blog.example.com`) from a host
+ * or URL, dropping any scheme, port, path, query and fragment.
+ *
+ * @throws {TypeError} If the value is not a valid host.
+ */
+export function normalizeHost(host: string | undefined): string | undefined {
+  const value = host?.trim();
+  if (!value) return undefined;
+  const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(value);
+  let hostname = '';
+  try {
+    ({ hostname } = new URL(hasScheme ? value : `https://${value}`));
+  } catch {
+    // Reported below.
+  }
+  if (!hostname) throw new TypeError(`Invalid publication host: "${value}"`);
+  return hostname;
+}
+
 /** Merges explicit options with environment variables and defaults. */
 export function resolveConfig(options: HashnodeClientOptions = {}): ResolvedConfig {
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') {
     throw new TypeError('No fetch implementation available. Pass one via the `fetch` option.');
   }
+  if (
+    options.timeoutMs !== undefined &&
+    !(Number.isFinite(options.timeoutMs) && options.timeoutMs > 0)
+  ) {
+    throw new RangeError(
+      `\`timeoutMs\` must be a positive number, received ${String(options.timeoutMs)}`,
+    );
+  }
 
   return {
-    host: options.host ?? env('HASHNODE_PUBLICATION_HOST'),
+    host: normalizeHost(options.host ?? env('HASHNODE_PUBLICATION_HOST')),
     publicationId: options.publicationId ?? env('HASHNODE_PUBLICATION_ID'),
     token: options.token ?? env('HASHNODE_ACCESS_TOKEN'),
     endpoint: options.endpoint ?? env('HASHNODE_API_URL') ?? DEFAULT_ENDPOINT,

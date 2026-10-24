@@ -34,12 +34,13 @@ export const POST = createWebhookHandler({
 });
 ```
 
-| Response | When                                                        |
-| -------- | ----------------------------------------------------------- |
-| `200`    | Valid delivery; body `{ received: true, handled: boolean }` |
-| `400`    | The signature is valid but the body is malformed            |
-| `401`    | Missing, invalid or expired signature                       |
-| `500`    | A handler threw, or no secret is configured                 |
+| Response | When                                                                        |
+| -------- | --------------------------------------------------------------------------- |
+| `200`    | Valid delivery; body `{ received: true, handled: boolean }`                 |
+| `400`    | The body can't be read, or the signature is valid but the body is malformed |
+| `401`    | Missing, invalid or expired signature                                       |
+| `405`    | The request method isn't POST (the response includes `Allow: POST`)         |
+| `500`    | A handler threw, or no secret is configured                                 |
 
 ### Other frameworks
 

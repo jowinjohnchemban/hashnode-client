@@ -4,7 +4,7 @@
 
 Since May 2026, Hashnode serves API requests only for publications on a **Pro plan**. Upgrade the publication in its dashboard under **Billing**; access starts working as soon as checkout completes. See the [Hashnode announcement](https://hashnode.com/changelog/2026-05-13-graphql-api-paid-access).
 
-Also check that `host` is your publication's host, for example `yourblog.hashnode.dev` or your custom domain, without `https://`.
+Also check that `host` is your publication's host, for example `yourblog.hashnode.dev` or your custom domain. A full URL such as `https://yourblog.hashnode.dev/` also works; the client reduces it to the host.
 
 ## The 1.x client stopped working
 

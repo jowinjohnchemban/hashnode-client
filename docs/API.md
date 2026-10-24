@@ -24,17 +24,17 @@ One client talks to one publication. Create it once and reuse it.
 
 ### Options
 
-| Option          | Type                       | Environment variable        | Default                          | Description                                                           |
-| --------------- | -------------------------- | --------------------------- | -------------------------------- | --------------------------------------------------------------------- |
-| `host`          | `string`                   | `HASHNODE_PUBLICATION_HOST` | —                                | Publication host, e.g. `blog.example.com`. Required for most methods. |
-| `publicationId` | `string`                   | `HASHNODE_PUBLICATION_ID`   | looked up from `host`            | Saves one request before the first search.                            |
-| `token`         | `string`                   | `HASHNODE_ACCESS_TOKEN`     | —                                | Personal access token, sent as `Authorization`. Required for drafts.  |
-| `endpoint`      | `string`                   | `HASHNODE_API_URL`          | `https://gql-beta.hashnode.com/` | GraphQL endpoint.                                                     |
-| `timeoutMs`     | `number`                   | `HASHNODE_TIMEOUT_MS`       | `15000`                          | Per-request timeout.                                                  |
-| `headers`       | `Record<string, string>`   | —                           | `{}`                             | Extra headers for every request.                                      |
-| `fetch`         | `typeof fetch`             | —                           | `globalThis.fetch`               | Custom fetch, e.g. for tests or proxies.                              |
-| `cache`         | `RequestCache`-like string | —                           | not set                          | Default `fetch` `cache` option.                                       |
-| `next`          | `{ revalidate?, tags? }`   | —                           | not set                          | Default Next.js data-cache options.                                   |
+| Option          | Type                       | Environment variable        | Default                          | Description                                                                                                                                                                            |
+| --------------- | -------------------------- | --------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `host`          | `string`                   | `HASHNODE_PUBLICATION_HOST` | —                                | Publication host, e.g. `blog.example.com`. A URL such as `https://blog.example.com/?ref=x` is reduced to its host name. An invalid host throws `TypeError`. Required for most methods. |
+| `publicationId` | `string`                   | `HASHNODE_PUBLICATION_ID`   | looked up from `host`            | Saves one request before the first search.                                                                                                                                             |
+| `token`         | `string`                   | `HASHNODE_ACCESS_TOKEN`     | —                                | Personal access token, sent as `Authorization`. Required for drafts.                                                                                                                   |
+| `endpoint`      | `string`                   | `HASHNODE_API_URL`          | `https://gql-beta.hashnode.com/` | GraphQL endpoint.                                                                                                                                                                      |
+| `timeoutMs`     | `number`                   | `HASHNODE_TIMEOUT_MS`       | `15000`                          | Per-request timeout. An explicit value must be a positive number (`RangeError` otherwise); an invalid `HASHNODE_TIMEOUT_MS` is ignored and the default is used.                        |
+| `headers`       | `Record<string, string>`   | —                           | `{}`                             | Extra headers for every request.                                                                                                                                                       |
+| `fetch`         | `typeof fetch`             | —                           | `globalThis.fetch`               | Custom fetch, e.g. for tests or proxies.                                                                                                                                               |
+| `cache`         | `RequestCache`-like string | —                           | not set                          | Default `fetch` `cache` option.                                                                                                                                                        |
+| `next`          | `{ revalidate?, tags? }`   | —                           | not set                          | Default Next.js data-cache options.                                                                                                                                                    |
 
 ### Request options
 
@@ -170,7 +170,7 @@ class HashnodeError extends Error {
 }
 ```
 
-Use `isHashnodeError(error)` to narrow `unknown`.
+Use `isHashnodeError(error)` to narrow `unknown`. It also recognises errors from another copy of the package, for example when an app loads both the ESM and CommonJS builds, where `instanceof` would fail.
 
 | `code`                      | Source            | Meaning                                                                    |
 | --------------------------- | ----------------- | -------------------------------------------------------------------------- |
