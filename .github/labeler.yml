@@ -1,0 +1,65 @@
+# Area labels from the files a pull request changes (actions/labeler).
+# Type labels come from the PR title; see .github/workflows/labels.yml.
+
+'area: client':
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/client.ts
+          - src/config.ts
+          - src/errors.ts
+          - src/index.ts
+          - src/queries.ts
+          - src/transport.ts
+          - src/types.ts
+
+'area: webhooks':
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/webhooks.ts
+          - docs/WEBHOOKS.md
+          - test/unit/webhooks.test.ts
+          - examples/webhook-handler.ts
+
+'area: mcp':
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/mcp.ts
+          - src/cli.ts
+          - docs/MCP.md
+          - test/**/mcp*.ts
+          - .mcp.json
+          - .vscode/mcp.json
+
+'area: docs':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.md'
+          - docs/**
+          - examples/**
+
+'area: tests':
+  - changed-files:
+      - any-glob-to-any-file:
+          - test/**
+          - vitest.config.ts
+
+'area: ci':
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - .releaserc.json
+          - .coderabbit.yaml
+
+'area: build':
+  - changed-files:
+      - any-glob-to-any-file:
+          - package.json
+          - pnpm-lock.yaml
+          - tsconfig.json
+          - tsdown.config.ts
+          - eslint.config.js
+          - .prettierrc.json
+          - .prettierignore
+          - .editorconfig
+          - .nvmrc
+          - scripts/**

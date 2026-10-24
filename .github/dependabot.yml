@@ -2,6 +2,7 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    labels: [dependencies, 'area: build']
     schedule:
       interval: weekly
     commit-message:
@@ -19,6 +20,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    labels: [dependencies, 'area: ci']
     schedule:
       interval: weekly
     commit-message:
