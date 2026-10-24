@@ -9,7 +9,7 @@
 [![CodeQL](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/codeql.yml/badge.svg)](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL API. Use Hashnode as a headless CMS from Node.js, Next.js and edge runtimes, and verify Hashnode webhooks.
+A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL API. Use Hashnode as a headless CMS from Node.js, Next.js and edge runtimes, verify Hashnode webhooks, and give AI assistants access to your blog through MCP.
 
 > [!IMPORTANT]
 > Since May 2026 Hashnode only serves API requests for publications on a **Pro plan**. Requests for other publications fail with `HashnodeError` code `FORBIDDEN`. See the [Hashnode announcement](https://hashnode.com/changelog/2026-05-13-graphql-api-paid-access).
@@ -34,6 +34,7 @@ A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL
 - **Predictable errors**: `HashnodeError` with Hashnode's error code, request timeouts and `AbortSignal` support
 - **Next.js ready**: `revalidate` and cache `tags` per client or per request
 - **Webhooks**: signature verification on Web Crypto and a drop-in route handler
+- **MCP server**: let AI assistants (Claude, Cursor, VS Code Copilot) read your blog with `npx -y @jowinjohnchemban/hashnode-client`
 - **Runs anywhere**: ESM and CommonJS, Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge
 - **No runtime dependencies**, published with npm provenance
 
@@ -119,6 +120,23 @@ export const POST = createWebhookHandler({ handlers: { '*': () => revalidateTag(
 
 The [Next.js guide](docs/NEXTJS.md) covers pages, metadata, sitemaps and search, and the [webhooks guide](docs/WEBHOOKS.md) covers webhook setup.
 
+### MCP server for AI assistants
+
+Give Claude, Cursor, VS Code Copilot or any MCP client read-only access to your blog:
+
+```json
+{
+  "mcpServers": {
+    "hashnode": {
+      "command": "npx",
+      "args": ["-y", "@jowinjohnchemban/hashnode-client", "--host", "blog.example.com"]
+    }
+  }
+}
+```
+
+Tools include `list_posts`, `get_post`, `search_posts`, series, static pages and comments. Setup for each client is in the [MCP guide](docs/MCP.md).
+
 ### Testing your code
 
 Pass a mock `fetch` instead of mocking the module:
@@ -137,6 +155,7 @@ const hashnode = new HashnodeClient({ host: 'blog.example.com', fetch });
 | [API reference](docs/API.md)               | Options, methods, types, errors and exports               |
 | [Next.js guide](docs/NEXTJS.md)            | App Router pages, caching, sitemaps, search, revalidation |
 | [Webhooks](docs/WEBHOOKS.md)               | Setup, verification, events and testing                   |
+| [MCP server](docs/MCP.md)                  | Using the blog from AI assistants                         |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common errors and fixes                                   |
 | [Migrating from 1.x](docs/MIGRATION.md)    | Breaking changes in 2.0                                   |
 | [Examples](examples)                       | Node.js script, Next.js data fetching, webhook handlers   |
@@ -144,13 +163,14 @@ const hashnode = new HashnodeClient({ host: 'blog.example.com', fetch });
 
 ## Compatibility
 
-| Runtime                         | Supported                                            |
-| ------------------------------- | ---------------------------------------------------- |
-| Node.js                         | 22, 24, 26 (tested on Linux, macOS, Windows)         |
-| Deno, Bun                       | Yes                                                  |
-| Cloudflare Workers, Vercel Edge | Yes                                                  |
-| Next.js                         | App Router and Pages Router                          |
-| Browsers                        | Works, but never ship an access token to the browser |
+| Runtime                             | Supported                                            |
+| ----------------------------------- | ---------------------------------------------------- |
+| Node.js                             | 22, 24, 26 (tested on Linux, macOS, Windows)         |
+| Deno, Bun                           | Yes                                                  |
+| Cloudflare Workers, Vercel Edge     | Yes                                                  |
+| Next.js                             | App Router and Pages Router                          |
+| Browsers                            | Works, but never ship an access token to the browser |
+| MCP server (`/mcp`, `hashnode-mcp`) | Node.js 22+                                          |
 
 Module formats: ESM (`import`) and CommonJS (`require`), with TypeScript declarations for both.
 

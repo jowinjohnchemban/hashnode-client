@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}" }
+    },
+    "hashnode": {
+      "command": "node",
+      "args": ["dist/cli.js"],
+      "env": { "HASHNODE_PUBLICATION_HOST": "${HASHNODE_PUBLICATION_HOST}" }
+    }
+  }
+}

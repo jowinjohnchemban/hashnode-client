@@ -6,6 +6,7 @@
 | [API reference](API.md)               | Every option, method, type, error code and export                                   |
 | [Next.js guide](NEXTJS.md)            | App Router pages, metadata, caching and tags, sitemaps, search and revalidation     |
 | [Webhooks](WEBHOOKS.md)               | Setting up Hashnode webhooks, verifying signatures, handling events and testing     |
+| [MCP server](MCP.md)                  | Giving AI assistants read-only access to a blog; tools and client setup             |
 | [Troubleshooting](TROUBLESHOOTING.md) | Common errors (`FORBIDDEN`, timeouts, empty results) and how to fix them            |
 | [Migrating from 1.x](MIGRATION.md)    | Breaking changes in 2.0 and how to update your code                                 |
 
