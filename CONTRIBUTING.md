@@ -120,4 +120,6 @@ Two checks are required before a PR can merge into `main`:
 - **`CI passed`** summarises the CI jobs; skipped jobs count as passed.
 - **`CodeRabbit`** is an automated code review of every PR into `main`, re-run on each push. Auto-merge waits for it, and its review comments must be resolved before merging (fix the code, or reply and resolve the thread). Configuration is in [`.coderabbit.yaml`](.coderabbit.yaml). Comment `@coderabbitai review` to re-run it.
 
-Pushes to other branches, and PRs into other branches, skip both.
+CodeRabbit skips `pnpm-lock.yaml` and `CHANGELOG.md`, which are generated; a PR that changes only those files gets a skipped review, which counts as passed.
+
+Pushes to branches other than `main` don't trigger CI. Pull requests into other branches still run CI, but only the `main` ruleset requires `CI passed` and `CodeRabbit`, and CodeRabbit reviews only PRs into `main`.

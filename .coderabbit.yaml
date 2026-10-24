@@ -30,11 +30,11 @@ reviews:
     # Only the default branch (main).
     base_branches: []
 
+  # Generated files that add noise to a review. A PR that changes only these
+  # files gets a skipped review, which reports success, so it is not blocked.
   path_filters:
     - '!pnpm-lock.yaml'
     - '!CHANGELOG.md'
-    - '!dist/**'
-    - '!coverage/**'
 
   path_instructions:
     - path: 'src/**/*.ts'
