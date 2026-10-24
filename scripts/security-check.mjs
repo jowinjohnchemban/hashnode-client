@@ -37,6 +37,19 @@ function grep(fileList, pattern, { skip } = {}) {
   return hits;
 }
 
+/** Returns the trimmed contents of each `${{ ... }}` expression in a line. */
+function expressionsIn(line) {
+  const expressions = [];
+  let start = line.indexOf('${{');
+  while (start !== -1) {
+    const end = line.indexOf('}}', start + 3);
+    if (end === -1) break;
+    expressions.push(line.slice(start + 3, end).trim());
+    start = line.indexOf('${{', end + 2);
+  }
+  return expressions;
+}
+
 const checks = [
   {
     name: 'Trojan Source: no invisible or bidirectional characters',
@@ -110,13 +123,17 @@ const checks = [
     },
   },
   {
-    name: 'Workflows: third-party actions pinned to a commit SHA',
+    name: 'Workflows: third-party actions pinned to a commit SHA, images to a digest',
     reference: 'CICD-SEC-3, CICD-SEC-8',
     run() {
-      return grep(
-        workflows,
-        /uses:\s*["']?(?!actions\/|github\/|\.\/)[\w.-]+\/[\w./-]+@(?![0-9a-f]{40}\b)/,
-      );
+      return [
+        ...grep(
+          workflows,
+          /uses:\s*["']?(?!actions\/|github\/|\.\/|docker:)[\w.-]+\/[\w./-]+@(?![0-9a-f]{40}\b)/,
+        ),
+        // docker:// actions must use an immutable digest, not a tag.
+        ...grep(workflows, /uses:\s*["']?docker:\/\/(?![^\s"'#]*@sha256:[0-9a-f]{64})/),
+      ];
     },
   },
   {
@@ -134,10 +151,24 @@ const checks = [
     run() {
       // Attacker-controlled fields must be read from the event payload in code
       // or passed through env, never expanded directly into a script.
-      return grep(
-        workflows,
-        /\$\{\{\s*github\.(head_ref|event\.(pull_request|issue|comment|review|head_commit|commits|pages)[\w.[\]*]*\.(title|body|ref|label|message|name|email|default_branch|description))\b/,
-      );
+      const untrusted =
+        /^github\.(head_ref|event\.(pull_request|issue|comment|review|head_commit|commits|pages)[\w.[\]*]*\.(title|body|ref|label|message|name|email|default_branch|description))\b/;
+      const hits = [];
+      for (const file of workflows) {
+        read(file)
+          .split('\n')
+          .forEach((line, index) => {
+            for (const expression of expressionsIn(line)) {
+              // Treat github.event['pull_request']["title"] like the dot form.
+              const normalized = expression.replace(/\[\s*['"]([\w-]+)['"]\s*\]/g, '.$1');
+              if (untrusted.test(normalized)) {
+                hits.push(`${file}:${index + 1}: ${line.trim().slice(0, 120)}`);
+                break;
+              }
+            }
+          });
+      }
+      return hits;
     },
   },
   {

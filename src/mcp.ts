@@ -530,14 +530,44 @@ const FREE_TEXT_ARGUMENTS = new Set(['query']);
  * Copies tool arguments for audit logs, replacing free-text values with their
  * length so the logs can't capture secrets someone pasted into a search.
  */
-function redactArguments(args: Args): Args {
+function redactArguments(args: Args, properties: Record<string, unknown>): Args {
   return Object.fromEntries(
-    Object.entries(args).map(([key, value]) =>
-      FREE_TEXT_ARGUMENTS.has(key) && typeof value === 'string'
-        ? [key, `[redacted: ${value.length} characters]`]
-        : [key, value],
-    ),
+    Object.entries(args).map(([key, value]) => {
+      const schema = properties[key];
+      if (!isRecord(schema)) return [key, '[redacted: unknown argument]'];
+      if (FREE_TEXT_ARGUMENTS.has(key)) {
+        return [key, `[redacted: ${typeof value === 'string' ? value.length : 0} characters]`];
+      }
+      return [key, auditValue(value, schema)];
+    }),
   );
+}
+
+/**
+ * Keeps a value only if it passes its schema (numbers, booleans, allowed enum
+ * values, strings matching the field's pattern); anything else could be
+ * arbitrary text and is replaced by its type and size.
+ */
+function auditValue(value: unknown, schema: Record<string, unknown>): unknown {
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
+  if (typeof value === 'string') {
+    if (Array.isArray(schema.enum) && schema.enum.includes(value)) return value;
+    const { pattern, maxLength } = schema;
+    if (
+      typeof pattern === 'string' &&
+      typeof maxLength === 'number' &&
+      value.length <= maxLength &&
+      new RegExp(pattern).test(value)
+    ) {
+      return value;
+    }
+    return `[redacted: ${value.length} characters]`;
+  }
+  if (Array.isArray(value) && isRecord(schema.items)) {
+    const items = schema.items;
+    return value.map((item: unknown) => auditValue(item, items));
+  }
+  return `[redacted: ${Array.isArray(value) ? 'array' : typeof value}]`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -661,7 +691,7 @@ export function createMcpServer(options: McpServerOptions = {}): McpServer {
     report({
       time: new Date(started).toISOString(),
       tool: tool.name,
-      arguments: redactArguments(args),
+      arguments: redactArguments(args, tool.inputSchema.properties as Record<string, unknown>),
       durationMs: Date.now() - started,
       isError: result.isError === true,
     });

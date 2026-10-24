@@ -271,7 +271,11 @@ describe('audit logging (cheat sheet §10)', () => {
 
     expect(events).toEqual([
       expect.objectContaining({ tool: 'get_post', arguments: { slug: 'hello' }, isError: false }),
-      expect.objectContaining({ tool: 'get_post', arguments: { slug: 'bad slug' }, isError: true }),
+      expect.objectContaining({
+        tool: 'get_post',
+        arguments: { slug: '[redacted: 8 characters]' },
+        isError: true,
+      }),
     ]);
     expect(Date.parse(events[0]!.time)).not.toBeNaN();
     expect(events[0]!.durationMs).toBeGreaterThanOrEqual(0);
@@ -429,5 +433,40 @@ describe('review hardening', () => {
     input.end();
     await done;
     expect(lines.filter(Boolean)).toHaveLength(20);
+  });
+});
+
+describe('audit redaction of invalid input', () => {
+  it('logs only values that pass their schema', async () => {
+    const events: McpToolCallEvent[] = [];
+    const mcp = createMcpServer({
+      host: HOST,
+      fetch: routedFetch({}).fetch,
+      onToolCall: (event) => events.push(event),
+    });
+    await call(mcp, 'get_post', { slug: 'my password is hunter2', format: 'html', extra: 'x' });
+    await call(mcp, 'list_posts', { tags: ['js', 'not a slug'], after: { $ne: 1 }, first: 2 });
+
+    expect(events.map((event) => event.arguments)).toEqual([
+      {
+        slug: '[redacted: 22 characters]',
+        format: 'html',
+        extra: '[redacted: unknown argument]',
+      },
+      { tags: ['js', '[redacted: 10 characters]'], after: '[redacted: object]', first: 2 },
+    ]);
+    expect(JSON.stringify(events)).not.toContain('hunter2');
+  });
+
+  it('redacts a non-string query', async () => {
+    const events: McpToolCallEvent[] = [];
+    const mcp = createMcpServer({
+      host: HOST,
+      publicationId: 'pub',
+      fetch: routedFetch({}).fetch,
+      onToolCall: (event) => events.push(event),
+    });
+    await call(mcp, 'search_posts', { query: { secret: 'value' } });
+    expect(events[0]!.arguments).toEqual({ query: '[redacted: 0 characters]' });
   });
 });
