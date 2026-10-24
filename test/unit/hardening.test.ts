@@ -32,10 +32,21 @@ describe('configuration validation', () => {
     ['http://blog.example.com/posts/1', 'blog.example.com'],
     ['  blog.example.com  ', 'blog.example.com'],
     ['blog.example.com/', 'blog.example.com'],
+    ['HTTPS://blog.example.com', 'blog.example.com'],
+    ['https://', undefined],
+    ['/', undefined],
+    ['   ', undefined],
     ['', undefined],
     [undefined, undefined],
   ])('normalizes host %j to %j', (input, expected) => {
     expect(normalizeHost(input)).toBe(expected);
+  });
+
+  it('normalizes hostile input in linear time', () => {
+    const started = performance.now();
+    expect(normalizeHost(`a${'/'.repeat(100_000)}`)).toBe('a');
+    expect(normalizeHost('/'.repeat(100_000))).toBeUndefined();
+    expect(performance.now() - started).toBeLessThan(100);
   });
 
   it('sends the normalized host', async () => {

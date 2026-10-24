@@ -84,11 +84,13 @@ function parseTimeout(value: string | undefined): number | undefined {
  * bare, lower-case host name Hashnode expects (`blog.example.com`).
  */
 export function normalizeHost(host: string | undefined): string | undefined {
-  const value = host
-    ?.trim()
-    .replace(/^[a-z][a-z\d+.-]*:\/\//i, '')
-    .replace(/\/.*$/, '')
-    .toLowerCase();
+  let value = host?.trim().toLowerCase();
+  if (!value) return undefined;
+  const scheme = /^[a-z][a-z\d+.-]*:\/\//.exec(value);
+  if (scheme) value = value.slice(scheme[0].length);
+  // indexOf instead of a regex keeps this linear for any input.
+  const slash = value.indexOf('/');
+  if (slash !== -1) value = value.slice(0, slash);
   return value === '' ? undefined : value;
 }
 
