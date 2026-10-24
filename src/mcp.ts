@@ -534,7 +534,9 @@ function redactArguments(args: Args, properties: Record<string, unknown>): Args 
   let unknown = 0;
   return Object.fromEntries(
     Object.entries(args).map(([key, value]) => {
-      const schema = properties[key];
+      // Own properties only: a caller-chosen key such as "__proto__" or
+      // "constructor" must not match something inherited from Object.prototype.
+      const schema = Object.hasOwn(properties, key) ? properties[key] : undefined;
       // Unknown argument names are chosen by the caller, so the name is
       // redacted too, not just the value.
       if (!isRecord(schema)) return [`[unknown argument ${++unknown}]`, '[redacted]'];

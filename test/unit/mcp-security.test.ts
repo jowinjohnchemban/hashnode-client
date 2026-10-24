@@ -488,3 +488,28 @@ describe('audit redaction of argument names', () => {
     expect(JSON.stringify(events)).not.toMatch(/sk-12345|second secret/);
   });
 });
+
+describe('prototype-named arguments', () => {
+  it('treats __proto__, constructor and toString as unknown arguments', async () => {
+    const events: McpToolCallEvent[] = [];
+    const mcp = createMcpServer({
+      host: HOST,
+      fetch: routedFetch({}).fetch,
+      onToolCall: (event) => events.push(event),
+    });
+    // JSON.parse creates an own "__proto__" property, as a real request would.
+    const args = JSON.parse(
+      '{"slug":"hello","__proto__":424242,"constructor":1,"toString":2}',
+    ) as Record<string, unknown>;
+    const result = await call(mcp, 'get_post', args);
+
+    expect(result.isError).toBe(true);
+    expect(events[0]!.arguments).toEqual({
+      slug: 'hello',
+      '[unknown argument 1]': '[redacted]',
+      '[unknown argument 2]': '[redacted]',
+      '[unknown argument 3]': '[redacted]',
+    });
+    expect(JSON.stringify(events)).not.toContain('424242');
+  });
+});
