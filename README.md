@@ -31,6 +31,7 @@ A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL
 
 - **Typed methods** for posts, search, series, static pages, comments, recommendations and drafts, plus `request()` for custom queries
 - **Pagination** with cursors, or `iteratePosts()` to walk every post
+- **Request de-duplication**: identical queries made at the same time share one API request. Any number of concurrent calls for the same post, whether 10 or 10,000, hit Hashnode once
 - **Predictable errors**: `HashnodeError` with Hashnode's error code, request timeouts and `AbortSignal` support
 - **Next.js ready**: `revalidate` and cache `tags` per client or per request
 - **Webhooks**: signature verification on Web Crypto and a drop-in route handler
