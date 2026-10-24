@@ -36,6 +36,7 @@
           - '*.md'
           - docs/**
           - examples/**
+          - skills/**
 
 'area: tests':
   - changed-files:

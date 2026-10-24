@@ -43,6 +43,7 @@ test/
   unit/         Fast tests with a mocked fetch
   integration/  Tests against the live Hashnode API
 examples/       Type-checked usage examples
+skills/         Agent Skill for AI coding agents (validated in lint, tested in test/unit/skill.test.ts)
 scripts/        Release tooling (package content check)
 ```
 

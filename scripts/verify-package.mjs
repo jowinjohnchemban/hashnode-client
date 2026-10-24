@@ -10,7 +10,15 @@ const BUILD_FILES = ENTRIES.flatMap((entry) => [
   `dist/${entry}.d.ts`,
   `dist/${entry}.d.cts`,
 ]);
-const REQUIRED = ['LICENSE', 'README.md', 'package.json', ...BUILD_FILES];
+const REQUIRED = [
+  'LICENSE',
+  'README.md',
+  'package.json',
+  'skills/hashnode-client/SKILL.md',
+  ...BUILD_FILES,
+];
+// The bundled Agent Skill's reference files.
+const SKILL_FILE = /^skills\/hashnode-client\/references\/[a-z-]+\.md$/;
 // Shared code split out by the bundler, e.g. dist/client-D9YoOlGe.cjs.
 const CHUNK = /^dist\/[a-z-]+-[\w-]{8}\.(js|cjs|d\.ts|d\.cts)$/;
 
@@ -21,7 +29,9 @@ const output = execFileSync('pnpm', ['pack', '--dry-run', '--json', '--ignore-sc
 const { files } = JSON.parse(output.slice(output.indexOf('{')));
 const actual = files.map((file) => file.path.replaceAll('\\', '/')).sort();
 
-const unexpected = actual.filter((path) => !REQUIRED.includes(path) && !CHUNK.test(path));
+const unexpected = actual.filter(
+  (path) => !REQUIRED.includes(path) && !CHUNK.test(path) && !SKILL_FILE.test(path),
+);
 const missing = REQUIRED.filter((path) => !actual.includes(path));
 
 if (unexpected.length || missing.length) {
