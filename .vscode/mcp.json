@@ -1,0 +1,21 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "hashnode-host",
+      "description": "Hashnode publication host on a Pro plan, e.g. blog.example.com"
+    }
+  ],
+  "servers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "hashnode": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/dist/cli.js"],
+      "env": { "HASHNODE_PUBLICATION_HOST": "${input:hashnode-host}" }
+    }
+  }
+}

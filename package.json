@@ -1,7 +1,7 @@
 {
   "name": "@jowinjohnchemban/hashnode-client",
   "version": "0.0.0-development",
-  "description": "Typed, zero-dependency Hashnode GraphQL API client for Node.js, Next.js and edge runtimes, with webhook verification.",
+  "description": "Typed, zero-dependency Hashnode GraphQL API client for Node.js, Next.js and edge runtimes, with webhook verification and an MCP server for AI assistants.",
   "keywords": [
     "hashnode",
     "graphql",
@@ -10,7 +10,10 @@
     "headless-cms",
     "nextjs",
     "webhooks",
-    "typescript"
+    "typescript",
+    "mcp",
+    "model-context-protocol",
+    "ai"
   ],
   "homepage": "https://github.com/jowinjohnchemban/hashnode-client#readme",
   "bugs": {
@@ -45,6 +48,16 @@
         "default": "./dist/webhooks.cjs"
       }
     },
+    "./mcp": {
+      "import": {
+        "types": "./dist/mcp.d.ts",
+        "default": "./dist/mcp.js"
+      },
+      "require": {
+        "types": "./dist/mcp.d.cts",
+        "default": "./dist/mcp.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.cjs",
@@ -54,8 +67,14 @@
     "*": {
       "webhooks": [
         "./dist/webhooks.d.cts"
+      ],
+      "mcp": [
+        "./dist/mcp.d.cts"
       ]
     }
+  },
+  "bin": {
+    "hashnode-mcp": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -74,11 +93,12 @@
     "lint:package": "publint --strict && attw --pack . && node scripts/verify-package.mjs",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm lint:package",
     "prepack": "pnpm build",
-    "test:integration": "vitest run --project integration"
+    "test:integration": "pnpm build && vitest run --project integration"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^5.0.5",
     "conventional-changelog-conventionalcommits": "^9.3.1",

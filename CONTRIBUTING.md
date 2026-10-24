@@ -36,6 +36,8 @@ src/
   errors.ts     HashnodeError
   config.ts     Options and environment variables
   webhooks.ts   Webhook verification and dispatch
+  mcp.ts        MCP server (tools, protocol handling, stdio transport)
+  cli.ts        hashnode-mcp command
 test/
   unit/         Fast tests with a mocked fetch
   integration/  Tests against the live Hashnode API

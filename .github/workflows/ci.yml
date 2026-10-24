@@ -112,6 +112,8 @@ jobs:
           npm install ./*.tgz
           node -e "const c = require('@jowinjohnchemban/hashnode-client'); if (typeof c.HashnodeClient !== 'function') process.exit(1)"
           node --input-type=module -e "import { createWebhookHandler } from '@jowinjohnchemban/hashnode-client/webhooks'; if (typeof createWebhookHandler !== 'function') process.exit(1)"
+          node --input-type=module -e "import { createMcpServer } from '@jowinjohnchemban/hashnode-client/mcp'; if (typeof createMcpServer !== 'function') process.exit(1)"
+          echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | npx --no-install hashnode-mcp --host example.com | grep -q '"get_post"'
 
   dependency-review:
     name: Dependency review

@@ -258,3 +258,19 @@ Exported from `@jowinjohnchemban/hashnode-client/webhooks` and re-exported from 
 | `DEFAULT_WEBHOOK_TOLERANCE_SECONDS`                                               | `300`                                                                                                                                                                     |
 | `POST_EVENTS`, `STATIC_PAGE_EVENTS`                                               | Event type lists                                                                                                                                                          |
 | Types                                                                             | `WebhookPayload`, `WebhookEventType`, `PostEventType`, `StaticPageEventType`, `WebhookHandler`, `WebhookHandlers`, `VerifyWebhookOptions`, `WebhookRequestHandlerOptions` |
+
+## MCP
+
+Exported from `@jowinjohnchemban/hashnode-client/mcp` (Node.js only). See the [MCP guide](MCP.md).
+
+| Export                                    | Description                                                                                     |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `createMcpServer(options?)`               | Creates a server; `options` are `HashnodeClientOptions` plus an optional `client`               |
+| `serveStdio(server, { input?, output? })` | Serves newline-delimited JSON-RPC over stdio until the input ends                               |
+| `server.handleMessage(message)`           | Handles one parsed JSON-RPC message; resolves to the response, or `undefined` for notifications |
+| `server.tools`                            | Tool definitions                                                                                |
+| `MCP_PROTOCOL_VERSIONS`                   | Supported protocol versions, newest first                                                       |
+| `MCP_ERROR_CODES`                         | JSON-RPC and MCP error codes                                                                    |
+| Types                                     | `McpServer`, `McpServerOptions`, `McpTool`, `McpToolResult`, `JsonRpcResponse`, `StdioOptions`  |
+
+The `hashnode-mcp` command (`npx -y @jowinjohnchemban/hashnode-client`) runs `serveStdio` with options from `--host` and the `HASHNODE_*` variables.
