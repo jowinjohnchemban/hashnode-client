@@ -83,8 +83,24 @@ Publishing to npm is automated with [release-please](https://github.com/googleap
 
 Only `dist/`, `README.md`, `LICENSE` and `package.json` are published. `scripts/verify-package.mjs` fails the release if anything else ends up in the tarball.
 
-One-time maintainer setup:
+### Publishing setup
 
-- Create a GitHub environment named `npm` with an `NPM_TOKEN` secret (an npm granular access token with publish rights). Or configure [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) for this repository and the `release.yml` workflow.
-- Enable **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**.
-- Release PRs are opened with `GITHUB_TOKEN`, so CI doesn't run on them automatically. Close and reopen the PR to trigger checks, or give release-please a PAT through the action's `token` input.
+npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts the GitHub Actions identity token for this repository, the `release.yml` workflow and the `npm` environment, so no npm token is stored in GitHub. Configure it once on npm (requires npm CLI 11.5.1+ and an npm login with publish rights):
+
+```sh
+npm login
+npx npm@latest trust github @jowinjohnchemban/hashnode-client \
+  --repository jowinjohnchemban/hashnode-client --file release.yml --environment npm
+```
+
+You can also do this on npmjs.com under **Package → Settings → Trusted publishing**. Afterwards, set **Publishing access** to "Require two-factor authentication and disallow tokens" so the package can only be published from the workflow.
+
+If trusted publishing isn't an option, add an npm granular access token as the `NPM_TOKEN` secret of the `npm` environment instead (`gh secret set NPM_TOKEN --env npm`).
+
+The repository is configured with:
+
+- an `npm` environment that only `main` can deploy to
+- **Allow GitHub Actions to create and approve pull requests**, so release-please can open release PRs
+- a `main` ruleset that blocks force pushes and deletion, requires a pull request and requires the CI checks to pass
+
+Release PRs are opened with `GITHUB_TOKEN`, so CI doesn't run on them. Repository admins can bypass the required checks to merge them, or you can give release-please a PAT through the action's `token` input so CI runs.
