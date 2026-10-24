@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit reviews every pull request into main before it merges. Its
+# "CodeRabbit" commit status is a required check in the main ruleset, so
+# auto-merge waits for the review, and unresolved review comments block the
+# merge. Pushes to other branches, and pull requests into other branches, are
+# not reviewed.
+
+language: en-US
+
+reviews:
+  profile: chill
+  # Report through the "CodeRabbit" commit status that the ruleset requires.
+  review_progress: false
+  commit_status: true
+  # A review that can't finish fails the status instead of leaving it pending.
+  fail_commit_status: true
+  abort_on_close: true
+  high_level_summary: true
+  collapse_walkthrough: true
+  poem: false
+  in_progress_fortune: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # Review every push so the latest commit always has a status.
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    # Only the default branch (main).
+    base_branches: []
+
+  # Generated files that add noise to a review. A PR that changes only these
+  # files gets a skipped review, which reports success, so it is not blocked.
+  path_filters:
+    - '!pnpm-lock.yaml'
+    - '!CHANGELOG.md'
+
+  path_instructions:
+    - path: 'src/**/*.ts'
+      instructions: >-
+        Published library code. The client and webhooks must run on Node.js 22+, edge
+        runtimes and workers: no node: imports outside src/mcp.ts and src/cli.ts, and
+        guard access to process. Use isHashnodeError() instead of instanceof. MCP tools
+        must stay read-only. Flag regular expressions that could backtrack on user
+        input. Public behaviour changes need tests and updates to docs/.
+    - path: 'test/unit/**/*.ts'
+      instructions: >-
+        Unit tests must not touch the network; they mock fetch with test/unit/helpers.ts.
+        Check that tests assert behaviour rather than implementation details.
+    - path: '.github/workflows/**'
+      instructions: >-
+        Pin third-party actions to a commit SHA with a version comment, and keep
+        permissions minimal.
+
+  pre_merge_checks:
+    # The PR title workflow already enforces Conventional Commits.
+    title:
+      mode: 'off'
+    docstrings:
+      mode: 'off'
+
+  tools:
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+chat:
+  auto_reply: true

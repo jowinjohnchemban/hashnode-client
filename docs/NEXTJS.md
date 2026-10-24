@@ -96,7 +96,7 @@ export default async function PostPage({ params }: Props) {
 }
 ```
 
-Next.js deduplicates identical `fetch` calls within one render, so `generateMetadata` and the page share a single request.
+Next.js deduplicates identical `fetch` calls within one render, so `generateMetadata` and the page share a single request. The client also shares identical in-flight requests across concurrent renders and route handlers that use the same client instance in the same server process. A burst of visitors on an uncached page served by one process therefore sends one request to Hashnode; separate processes, serverless instances or edge isolates each send their own. This is a feature of the client, not of Next.js, so it works the same in any Node.js or edge app. See [request de-duplication](API.md#request-de-duplication).
 
 > [!WARNING]
 > `content.html` is rendered by Hashnode, but only you control what's published on your blog. If others can publish to your publication, sanitize the HTML before rendering it.
