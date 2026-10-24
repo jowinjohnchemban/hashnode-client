@@ -139,6 +139,23 @@ The configured publication host.
 
 When several identical queries are in flight at once, the client sends one API request and gives every caller the result. For example, 100 concurrent `getPost('hello')` calls make a single request to Hashnode. This applies to every method and to `request()`.
 
+It's built into the client, so it works the same everywhere the client runs: Node.js servers (`node:http`, Express, Fastify, Hono), serverless functions, edge runtimes, scripts, the MCP server and Next.js. For example, in a plain Node.js server, a burst of visitors asking for the same post sends one request to Hashnode:
+
+```ts
+import { createServer } from 'node:http';
+import { HashnodeClient } from '@jowinjohnchemban/hashnode-client';
+
+const hashnode = new HashnodeClient({ host: 'blog.example.com' });
+
+createServer(async (req, res) => {
+  const slug = new URL(req.url ?? '/', 'http://localhost').pathname.slice(1);
+  // Concurrent requests for the same slug share one Hashnode API call.
+  const post = slug ? await hashnode.getPost(slug) : null;
+  res.writeHead(post ? 200 : 404, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(post));
+}).listen(3000);
+```
+
 - **Identical** means the same query, variables and `cache`/`next` options. Anything else is sent separately.
 - Each caller gets **its own copy** of the result, so changing one doesn't affect the others.
 - Only requests that are **in flight** are shared. Once a request finishes, the next call sends a new one; for longer caching, use `cache` or `next`.
