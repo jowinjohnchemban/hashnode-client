@@ -1,30 +1,49 @@
 # @jowinjohnchemban/hashnode-client
 
-[![npm](https://img.shields.io/npm/v/@jowinjohnchemban/hashnode-client)](https://www.npmjs.com/package/@jowinjohnchemban/hashnode-client)
+[![npm version](https://img.shields.io/npm/v/@jowinjohnchemban/hashnode-client?logo=npm)](https://www.npmjs.com/package/@jowinjohnchemban/hashnode-client)
+[![npm downloads](https://img.shields.io/npm/dm/@jowinjohnchemban/hashnode-client)](https://www.npmjs.com/package/@jowinjohnchemban/hashnode-client)
+[![Node.js](https://img.shields.io/node/v/@jowinjohnchemban/hashnode-client?logo=nodedotjs)](package.json)
+[![Types](https://img.shields.io/npm/types/@jowinjohnchemban/hashnode-client)](docs/API.md#types)
 [![CI](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/ci.yml/badge.svg)](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/ci.yml)
+[![API integration](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/integration.yml/badge.svg)](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/integration.yml)
 [![CodeQL](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/codeql.yml/badge.svg)](https://github.com/jowinjohnchemban/hashnode-client/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL API, for using Hashnode as a headless CMS from Node.js, Next.js and edge runtimes. Includes webhook signature verification.
-
-- Typed methods for posts, search, series, static pages, comments, recommendations and drafts
-- Cursor pagination with an async iterator for walking every post
-- Typed `HashnodeError` with the server's error code, request timeouts and `AbortSignal` support
-- Next.js data-cache options (`revalidate`, `tags`) per client or per request
-- Webhook verification with Web Crypto, plus a ready-made Fetch API route handler
-- ESM and CommonJS builds, no runtime dependencies
+A typed, zero-dependency client for the [Hashnode](https://hashnode.com) GraphQL API. Use Hashnode as a headless CMS from Node.js, Next.js and edge runtimes, and verify Hashnode webhooks.
 
 > [!IMPORTANT]
 > Since May 2026 Hashnode only serves API requests for publications on a **Pro plan**. Requests for other publications fail with `HashnodeError` code `FORBIDDEN`. See the [Hashnode announcement](https://hashnode.com/changelog/2026-05-13-graphql-api-paid-access).
+
+## Contents
+
+- [Features](#features)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Usage](#usage)
+- [Documentation](#documentation)
+- [Compatibility](#compatibility)
+- [Versioning](#versioning)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+
+## Features
+
+- **Typed methods** for posts, search, series, static pages, comments, recommendations and drafts, plus `request()` for custom queries
+- **Pagination** with cursors, or `iteratePosts()` to walk every post
+- **Predictable errors**: `HashnodeError` with Hashnode's error code, request timeouts and `AbortSignal` support
+- **Next.js ready**: `revalidate` and cache `tags` per client or per request
+- **Webhooks**: signature verification on Web Crypto and a drop-in route handler
+- **Runs anywhere**: ESM and CommonJS, Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge
+- **No runtime dependencies**, published with npm provenance
 
 ## Install
 
 ```sh
 pnpm add @jowinjohnchemban/hashnode-client
-# or: npm install / yarn add / bun add
 ```
 
-Requires Node.js 22 or later, or any runtime with `fetch` and Web Crypto (Deno, Bun, Cloudflare Workers, Vercel Edge).
+Or use `npm install`, `yarn add` or `bun add`.
 
 ## Quick start
 
@@ -33,71 +52,44 @@ import { HashnodeClient } from '@jowinjohnchemban/hashnode-client';
 
 const hashnode = new HashnodeClient({ host: 'blog.example.com' });
 
-const { items: posts, pageInfo } = await hashnode.getPosts({ first: 10 });
+const publication = await hashnode.getPublication();
+const { items: posts } = await hashnode.getPosts({ first: 10 });
 const post = await hashnode.getPost('my-first-post'); // null if it doesn't exist
 ```
 
-Every option can also come from the environment (see [`.env.example`](.env.example)):
+Every option can also come from an environment variable (`HASHNODE_PUBLICATION_HOST`, `HASHNODE_ACCESS_TOKEN`, …; see [`.env.example`](.env.example)), so `new HashnodeClient()` works too.
 
-| Option          | Environment variable        | Default                          |
-| --------------- | --------------------------- | -------------------------------- |
-| `host`          | `HASHNODE_PUBLICATION_HOST` | —                                |
-| `publicationId` | `HASHNODE_PUBLICATION_ID`   | looked up from `host` on demand  |
-| `token`         | `HASHNODE_ACCESS_TOKEN`     | — (needed for drafts)            |
-| `endpoint`      | `HASHNODE_API_URL`          | `https://gql-beta.hashnode.com/` |
-| `timeoutMs`     | `HASHNODE_TIMEOUT_MS`       | `15000`                          |
-| `headers`       | —                           | `{}`                             |
-| `fetch`         | —                           | `globalThis.fetch`               |
-| `cache`, `next` | —                           | not set                          |
+## Usage
 
-## API
+### Methods
 
-All methods return promises and throw `HashnodeError` on failure. Lookups by slug or ID return `null` when the item does not exist. List methods return a `Page<T>`:
+| Method                                            | Returns                                   |
+| ------------------------------------------------- | ----------------------------------------- |
+| `getPublication()`                                | `Publication \| null`                     |
+| `getPosts({ first?, after?, tagSlugs? })`         | `Page<BlogPost>`                          |
+| `iteratePosts({ first?, tagSlugs? })`             | `AsyncGenerator<BlogPost>`                |
+| `getPost(slug)` / `getPostById(id)`               | `BlogPostDetail \| null`                  |
+| `searchPosts(query, { first?, after?, sortBy? })` | `Page<BlogPost>`                          |
+| `getSeriesList()` / `getSeries(slug)`             | `Page<Series>` / `Series \| null`         |
+| `getSeriesPosts(slug, { first?, after? })`        | `Page<BlogPost>`                          |
+| `getStaticPages()` / `getStaticPage(slug)`        | `Page<StaticPage>` / `StaticPage \| null` |
+| `getPostComments(postId, { first?, after? })`     | `Page<Comment>`                           |
+| `getRecommendedPublications()`                    | `RecommendedPublication[]`                |
+| `getDrafts({ first?, after? })`                   | `Page<Draft>` (requires `token`)          |
+| `request(query, variables?)`                      | raw GraphQL `data`                        |
 
-```ts
-interface Page<T> {
-  items: T[];
-  pageInfo: { hasNextPage: boolean; endCursor: string | null };
-  totalDocuments: number | null;
-}
-```
-
-| Method                                            | Returns                               |
-| ------------------------------------------------- | ------------------------------------- |
-| `getPublication()`                                | `Publication \| null`                 |
-| `getPublicationId()`                              | `string`                              |
-| `getPosts({ first?, after?, tagSlugs? })`         | `Page<BlogPost>`                      |
-| `iteratePosts({ first?, tagSlugs? })`             | `AsyncGenerator<BlogPost>`            |
-| `getPost(slug)`                                   | `BlogPostDetail \| null`              |
-| `getPostById(id)`                                 | `BlogPostDetail \| null`              |
-| `searchPosts(query, { first?, after?, sortBy? })` | `Page<BlogPost>`                      |
-| `getSeriesList({ first?, after? })`               | `Page<Series>`                        |
-| `getSeries(slug)`                                 | `Series \| null`                      |
-| `getSeriesPosts(slug, { first?, after? })`        | `Page<BlogPost>`                      |
-| `getStaticPages({ first?, after? })`              | `Page<StaticPage>`                    |
-| `getStaticPage(slug)`                             | `StaticPage \| null`                  |
-| `getPostComments(postId, { first?, after? })`     | `Page<Comment>`                       |
-| `getRecommendedPublications()`                    | `RecommendedPublication[]`            |
-| `getDrafts({ first?, after? })`                   | `Page<Draft>` (requires `token`)      |
-| `request(query, variables?, options?)`            | raw GraphQL `data` for custom queries |
-
-`first` defaults to 10 and is capped at Hashnode's limit (100, or 50 for drafts). Every method also accepts per-request options as its last argument: `{ signal?, cache?, next? }`.
+All of them are described in the [API reference](docs/API.md).
 
 ### Pagination
 
 ```ts
-let after: string | null = null;
-do {
-  const page = await hashnode.getPosts({ first: 50, after });
-  render(page.items);
-  after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
-} while (after);
+const page = await hashnode.getPosts({ first: 20 });
+const next = await hashnode.getPosts({ first: 20, after: page.pageInfo.endCursor });
 
-// or let the client do it
 for await (const post of hashnode.iteratePosts()) console.log(post.slug);
 ```
 
-### Error handling
+### Errors
 
 ```ts
 import { isHashnodeError } from '@jowinjohnchemban/hashnode-client';
@@ -105,93 +97,31 @@ import { isHashnodeError } from '@jowinjohnchemban/hashnode-client';
 try {
   await hashnode.getPosts();
 } catch (error) {
-  if (isHashnodeError(error)) {
-    error.code; // 'FORBIDDEN', 'TIMEOUT', 'NETWORK_ERROR', 'HTTP_ERROR', 'CONFIG_ERROR', ...
-    error.status; // HTTP status, if any
-    error.errors; // raw GraphQL errors, if any
-  }
+  if (isHashnodeError(error)) console.error(error.code, error.message); // e.g. FORBIDDEN, TIMEOUT
 }
 ```
 
-### Next.js caching
+All error codes are listed in the [API reference](docs/API.md#errors). If you prefer `[]` or `null` instead of exceptions, use the [convenience functions](docs/API.md#convenience-functions) (`getBlogPosts()`, `getBlogPostBySlug()`, …).
 
-The client sets no cache options by default. Pass Next.js [`fetch` options](https://nextjs.org/docs/app/api-reference/functions/fetch) once on the client or override them per request:
+### Next.js
 
 ```ts
-export const hashnode = new HashnodeClient({
-  host: 'blog.example.com',
-  next: { revalidate: 300, tags: ['hashnode'] },
-});
-
-await hashnode.getPost(slug, { next: { revalidate: 60, tags: ['hashnode', `post:${slug}`] } });
-await hashnode.searchPosts(query, {}, { cache: 'no-store' });
+export const hashnode = new HashnodeClient({ next: { revalidate: 3600, tags: ['hashnode'] } });
 ```
 
-### Convenience functions
-
-For simple scripts, these functions use a shared client configured from environment variables. They **never throw**: errors are logged with `console.error` and an empty result (`[]` or `null`) is returned.
-
-`getPublication`, `getBlogPosts(count?)`, `getBlogPostBySlug(slug)`, `searchPosts(query, limit?)`, `getSeriesList(limit?)`, `getSeries(slug)`, `getSeriesPosts(slug, limit?)`, `getStaticPages(limit?)`, `getStaticPage(slug)`, `getPostComments(postId, limit?)`, `getRecommendedPublications()`, `getDrafts(limit?)`.
-
-Use `HashnodeClient` when you need errors or pagination.
-
-## Webhooks
-
-Import from `@jowinjohnchemban/hashnode-client/webhooks` (also re-exported from the main entry). The module only uses Web Crypto, so it runs on edge runtimes.
-
-Next.js App Router route handler. The secret is read from `HASHNODE_WEBHOOK_SECRET` unless you pass `secret`:
-
 ```ts
-// app/api/hashnode/route.ts
+// app/api/hashnode/route.ts: revalidate when you publish
 import { revalidateTag } from 'next/cache';
 import { createWebhookHandler } from '@jowinjohnchemban/hashnode-client/webhooks';
 
-export const POST = createWebhookHandler({
-  handlers: {
-    post_published: () => revalidateTag('hashnode'),
-    post_updated: ({ data }) => revalidateTag(`post:${data.post?.id}`),
-    '*': ({ data }) => console.log('Hashnode event', data.eventType),
-  },
-});
+export const POST = createWebhookHandler({ handlers: { '*': () => revalidateTag('hashnode') } });
 ```
 
-The handler responds `401` for a bad signature, `400` for a malformed body, `500` if a handler throws and `200` otherwise.
+The [Next.js guide](docs/NEXTJS.md) covers pages, metadata, sitemaps and search, and the [webhooks guide](docs/WEBHOOKS.md) covers webhook setup.
 
-In other frameworks, verify the **raw** request body before parsing it:
+### Testing your code
 
-```ts
-import {
-  verifyWebhookSignature,
-  parseWebhookPayload,
-  WEBHOOK_SIGNATURE_HEADER,
-} from '@jowinjohnchemban/hashnode-client/webhooks';
-
-const valid = await verifyWebhookSignature({
-  payload: rawBody,
-  signature: req.headers[WEBHOOK_SIGNATURE_HEADER],
-  secret: process.env.HASHNODE_WEBHOOK_SECRET!,
-});
-if (!valid) return res.status(401).end();
-const { data } = parseWebhookPayload(rawBody);
-const post = data.post && (await hashnode.getPostById(data.post.id));
-```
-
-Signatures use the format `x-hashnode-signature: t=<timestamp>,v1=<hex HMAC-SHA256 of "<timestamp>.<body>">`. Signatures older than 5 minutes are rejected; change this with `toleranceSeconds`. Use `generateWebhookSignature(body, secret)` to sign test requests.
-
-> [!NOTE]
-> Hashnode's current docs don't describe the webhook signing scheme. This implementation follows Hashnode's previously published format. If verification fails for real deliveries, please [open an issue](https://github.com/jowinjohnchemban/hashnode-client/issues/new/choose) with the header format you receive.
-
-## Examples
-
-See [`examples/`](examples) for a Node script, Next.js data fetching and webhook handlers.
-
-## Upgrading from 1.x
-
-See [docs/MIGRATION.md](docs/MIGRATION.md).
-
-## Testing your integration
-
-In your own tests, pass a mock `fetch` to the client instead of mocking the module:
+Pass a mock `fetch` instead of mocking the module:
 
 ```ts
 const fetch = async () =>
@@ -199,12 +129,45 @@ const fetch = async () =>
 const hashnode = new HashnodeClient({ host: 'blog.example.com', fetch });
 ```
 
-The library itself is covered by unit tests, daily contract tests against the live Hashnode schema, and optional live tests against a Pro publication. See [CONTRIBUTING.md](CONTRIBUTING.md#testing).
+## Documentation
+
+| Guide                                      | Covers                                                    |
+| ------------------------------------------ | --------------------------------------------------------- |
+| [Getting started](docs/GETTING_STARTED.md) | Setup, configuration and first queries                    |
+| [API reference](docs/API.md)               | Options, methods, types, errors and exports               |
+| [Next.js guide](docs/NEXTJS.md)            | App Router pages, caching, sitemaps, search, revalidation |
+| [Webhooks](docs/WEBHOOKS.md)               | Setup, verification, events and testing                   |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common errors and fixes                                   |
+| [Migrating from 1.x](docs/MIGRATION.md)    | Breaking changes in 2.0                                   |
+| [Examples](examples)                       | Node.js script, Next.js data fetching, webhook handlers   |
+| [Changelog](CHANGELOG.md)                  | Release history                                           |
+
+## Compatibility
+
+| Runtime                         | Supported                                            |
+| ------------------------------- | ---------------------------------------------------- |
+| Node.js                         | 22, 24, 26 (tested on Linux, macOS, Windows)         |
+| Deno, Bun                       | Yes                                                  |
+| Cloudflare Workers, Vercel Edge | Yes                                                  |
+| Next.js                         | App Router and Pages Router                          |
+| Browsers                        | Works, but never ship an access token to the browser |
+
+Module formats: ESM (`import`) and CommonJS (`require`), with TypeScript declarations for both.
+
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org). Releases are automated from [Conventional Commits](https://www.conventionalcommits.org/) and listed in the [changelog](CHANGELOG.md) and on [GitHub Releases](https://github.com/jowinjohnchemban/hashnode-client/releases). Every npm release is built and published by GitHub Actions with a provenance attestation.
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). Report security issues privately as described in [SECURITY.md](SECURITY.md).
+Contributions are welcome! Read the [contributing guide](CONTRIBUTING.md) for setup, testing and the release process, and follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Please report vulnerabilities privately as described in the [security policy](SECURITY.md).
 
 ## License
 
-Open source under the [MIT License](LICENSE).
+[MIT](LICENSE) © 2025–2026 Jowin John Chemban
+
+This project is not affiliated with Hashnode.
