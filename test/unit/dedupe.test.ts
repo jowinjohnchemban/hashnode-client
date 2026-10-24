@@ -364,3 +364,26 @@ describe('invalid request input', () => {
     }
   });
 });
+
+describe('variable snapshots', () => {
+  it('sends exactly the variables the sharing key was built from', async () => {
+    const { fetch, calls } = controlledFetch();
+    const client = new HashnodeClient({ host: HOST, fetch, dedupe: true });
+    // A getter that returns a different value on each read must not let two
+    // callers share a key while sending different requests.
+    let reads = 0;
+    const tricky = {
+      get slug() {
+        reads++;
+        return reads === 1 ? 'a' : 'b';
+      },
+    };
+
+    const pending = client.request('query ($slug: String!) { a }', tricky);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.body.variables).toEqual({ slug: 'a' });
+    expect(reads).toBe(1);
+    calls[0]!.respond(json({ data: { a: 1 } }));
+    await pending;
+  });
+});

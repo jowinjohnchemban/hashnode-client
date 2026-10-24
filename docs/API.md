@@ -165,6 +165,7 @@ createServer(async (req, res) => {
 
 - **Identical** means the same query, variables and `cache`/`next` options. Anything else is sent separately.
 - Each caller gets **its own copy** of the result, so changing one doesn't affect the others.
+- Sharing happens **within one client instance in one process**. Separate processes, serverless instances and edge isolates each make their own request.
 - Only requests that are **in flight** are shared. Once a request finishes, the next call sends a new one; for longer caching, use `cache` or `next`.
 - **Aborting** a caller's `signal` rejects only that caller with `ABORTED`. The API request is cancelled once every caller waiting for it has aborted.
 - **Failures** are shared too, and the next call retries.

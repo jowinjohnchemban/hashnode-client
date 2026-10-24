@@ -130,12 +130,17 @@ export class HashnodeClient {
       }
       const cache = options.cache ?? this.#config.cache;
       const next = options.next ?? this.#config.next;
-      const key = JSON.stringify([query, variables, cache ?? null, next ?? null]);
+      // Serialize the variables once and use that snapshot for both the key and
+      // the request, so the key always describes exactly what is sent, even if
+      // the caller's object has getters or changes later.
+      const serialized = JSON.stringify(variables);
+      const snapshot = JSON.parse(serialized) as Record<string, unknown>;
+      const key = JSON.stringify([query, serialized, cache ?? null, next ?? null]);
       // Each caller's signal is applied separately; the shared request is only
       // cancelled once every caller waiting for it has aborted.
       return this.#inFlight.run(
         key,
-        (signal) => executeGraphQL<T>(this.#config, query, variables, { cache, next, signal }),
+        (signal) => executeGraphQL<T>(this.#config, query, snapshot, { cache, next, signal }),
         options.signal,
       );
     } catch (error) {
