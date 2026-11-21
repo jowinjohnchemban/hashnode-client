@@ -110,7 +110,7 @@
     "globals": "^17.13.0",
     "prettier": "^3.9.10",
     "publint": "^0.3.25",
-    "semantic-release": "^25.0.9",
+    "semantic-release": "^26.0.1",
     "skills-ref": "^0.1.5",
     "tsdown": "^0.23.1",
     "typescript": "~6.0.3",
